@@ -2,7 +2,6 @@ package com.example.firebaseauth
 
 import android.app.Activity
 import android.util.Log
-import androidx.compose.runtime.Composable
 import com.google.firebase.FirebaseException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.*
@@ -10,17 +9,24 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import java.util.concurrent.TimeUnit
 
+interface IPhoneAuth {
+    var code: String
+}
+
 class PhoneAuth(
     activity: Activity,
-    var verifyCodeSent: (verificationId: String,
-                         token: PhoneAuthProvider.ForceResendingToken) -> Unit
-) {
+    var getCodeFromUser: IPhoneAuth.() -> String
+): IPhoneAuth {
     companion object {
         private const val TAG = "PhoneAuthActivity"
     }
 
     val auth: FirebaseAuth = Firebase.auth
+    override var code: String
+        get() = TODO("Not yet implemented")
+        set(value) {}
 
+    val self = this
     private val activity = activity
     private lateinit var storedVerificationId: String
     private lateinit var resendToken: PhoneAuthProvider.ForceResendingToken
@@ -61,7 +67,7 @@ class PhoneAuth(
             // Save verification ID and resending token so we can use them later
             storedVerificationId = verificationId
             resendToken = token
-            verifyCodeSent(verificationId, token)
+            var code = getCodeFromUser(self)
         }
 
         override fun onCodeAutoRetrievalTimeOut(verificationId: String) {

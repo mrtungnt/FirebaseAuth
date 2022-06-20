@@ -4,24 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthProvider
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), IPhoneAuth {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
 //        outState.putBoolean("VerificationInProgress", verificationInProgress)
@@ -31,17 +30,17 @@ class MainActivity : ComponentActivity() {
         super.onRestoreInstanceState(savedInstanceState)
     }
 
+    override var code: String = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        FirebaseAuth.getInstance().useEmulator("10.0.0.2", 9099)
+        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+
 
         val phoneAuth =
-            PhoneAuth(this) { verificationId, token ->
-                onVerifyCodeSent(
-                    verificationId,
-                    token
-                ) { verifyCodeSentScreen(code = verificationId) }
+            PhoneAuth(this) {
+                onGetCodeFromUser { code = verifyCodeSentScreen() }
             }
         val currentUser = phoneAuth.auth.currentUser
         setContent {
@@ -52,7 +51,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background
                 ) {
                     if (currentUser == null) {
-                        loginWithPhoneNumberScreen(phoneAuth.auth)
+                        loginWithPhoneNumberScreen(phoneAuth)
                     } else {
                         Text(text = "Welcome $currentUser")
                     }
@@ -62,50 +61,73 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-fun onVerifyCodeSent(
-    verificationId: String,
-    token: PhoneAuthProvider.ForceResendingToken,
-    verifyCodeSentScreen: @Composable (code: String) -> Unit
-) {
+fun MainActivity.onGetCodeFromUser(verifyCodeSentScreen: @Composable () -> Unit): String {
+    return code
 }
 
 @Composable
-fun loginWithPhoneNumberScreen(auth: FirebaseAuth = Firebase.auth) {
-    Surface(
-        color = Color.Black,
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        Column(modifier = Modifier.wrapContentSize()) {
-            Image(painter = painterResource(id = R.drawable.ic_group_2), null)
-//            TextField(value = , onValueChange = )
-        }
+fun loginWithPhoneNumberScreen(auth: PhoneAuth?) {
+    var phoneNumber by remember {
+        mutableStateOf("+84")
     }
-}
-
-@Composable
-fun loginWithPhoneNumberScreenPrototype() {
     Surface(
         color = MaterialTheme.colors.background,
         modifier = Modifier
             .fillMaxSize()
     ) {
-        Column(modifier = Modifier.wrapContentSize()) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Image(painter = painterResource(id = R.drawable.ic_group_2), null)
-//            TextField(value = , onValueChange = )
-//            Text(text = "ABC", modifier = Modifier.width(239.dp).wrapContentWidth())
+            OutlinedTextField(
+                value = phoneNumber,
+                onValueChange = { v -> phoneNumber = v },
+                label = {
+                    Text(
+                        text = "Nhập số điện thoại"
+                    )
+                },
+                keyboardActions = KeyboardActions(onDone = {
+                    auth?.startPhoneNumberVerification(phoneNumber)
+                }),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone,
+                    imeAction = ImeAction.Done
+                )
+            )
         }
     }
 }
 
 @Composable
-fun verifyCodeSentScreen(code: String) {
+fun verifyCodeSentScreen(): String {
+    var inputCode by remember {
+        mutableStateOf("")
+    }
+    TextField(
+        value = inputCode,
+        onValueChange = { v -> inputCode = v },
+        keyboardActions = KeyboardActions(onDone = {
+        }),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done
+        ),
+        label = { Text("Nhập code nhận được qua SMS") }
+    )
+    return inputCode
 }
 
 @Preview(showBackground = true)
 @Composable
 fun loginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
-        loginWithPhoneNumberScreenPrototype()
+        loginWithPhoneNumberScreen(null)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun verifyCodeSentScreenPreview() {
+    FirebaseAuthTheme {
+        verifyCodeSentScreen()
     }
 }
