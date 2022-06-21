@@ -9,25 +9,17 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import java.util.concurrent.TimeUnit
 
-interface IPhoneAuth {
-    var code: String
-}
-
 class PhoneAuth(
-    activity: Activity,
-    var getCodeFromUser: IPhoneAuth.() -> String
-): IPhoneAuth {
+    private val activity: Activity,
+    var notifyCodeSent: () -> Unit,
+    var notifySuccessfulLogin: (FirebaseUser?) -> Unit,
+) {
     companion object {
         private const val TAG = "PhoneAuthActivity"
     }
 
-    val auth: FirebaseAuth = Firebase.auth
-    override var code: String
-        get() = TODO("Not yet implemented")
-        set(value) {}
+    private val auth: FirebaseAuth = Firebase.auth
 
-    val self = this
-    private val activity = activity
     private lateinit var storedVerificationId: String
     private lateinit var resendToken: PhoneAuthProvider.ForceResendingToken
 
@@ -67,7 +59,7 @@ class PhoneAuth(
             // Save verification ID and resending token so we can use them later
             storedVerificationId = verificationId
             resendToken = token
-            var code = getCodeFromUser(self)
+            notifyCodeSent()
         }
 
         override fun onCodeAutoRetrievalTimeOut(verificationId: String) {
@@ -88,6 +80,11 @@ class PhoneAuth(
         verificationInProgress = true
     }
 
+    fun onReceiveRespondedCode(code: String) {
+        val credential = PhoneAuthProvider.getCredential(storedVerificationId, code)
+        signInWithPhoneAuthCredential(credential)
+    }
+
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
         auth.signInWithCredential(credential)
             .addOnCompleteListener(activity) { task ->
@@ -96,6 +93,7 @@ class PhoneAuth(
                     Log.d(TAG, "signInWithCredential:success")
 
                     val user = task.result?.user
+                    notifySuccessfulLogin(user)
                 } else {
                     // Sign in failed, display a message and update the UI
                     Log.w(TAG, "signInWithCredential:failure", task.exception)

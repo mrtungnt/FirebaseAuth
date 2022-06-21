@@ -6,21 +6,24 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
-class MainActivity : ComponentActivity(), IPhoneAuth {
+class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
 //        outState.putBoolean("VerificationInProgress", verificationInProgress)
@@ -30,19 +33,17 @@ class MainActivity : ComponentActivity(), IPhoneAuth {
         super.onRestoreInstanceState(savedInstanceState)
     }
 
-    override var code: String = ""
+    private var numOfReceivingCode by mutableStateOf(0)
+    private var currentUser by mutableStateOf(Firebase.auth.currentUser)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
 
-
         val phoneAuth =
-            PhoneAuth(this) {
-                onGetCodeFromUser { code = verifyCodeSentScreen() }
-            }
-        val currentUser = phoneAuth.auth.currentUser
+            PhoneAuth(this, { numOfReceivingCode++ }, { user -> currentUser = user })
+
         setContent {
             FirebaseAuthTheme {
                 // A surface container using the 'background' color from the theme
@@ -50,26 +51,46 @@ class MainActivity : ComponentActivity(), IPhoneAuth {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    if (currentUser == null) {
-                        loginWithPhoneNumberScreen(phoneAuth)
-                    } else {
-                        Text(text = "Welcome $currentUser")
-                    }
+                    HomeScreen(currentUser, phoneAuth, numOfReceivingCode = numOfReceivingCode)
                 }
             }
         }
     }
 }
 
-fun MainActivity.onGetCodeFromUser(verifyCodeSentScreen: @Composable () -> Unit): String {
-    return code
-}
-
 @Composable
-fun loginWithPhoneNumberScreen(auth: PhoneAuth?) {
+fun HomeScreen(user: FirebaseUser?, phoneAuth: PhoneAuth, numOfReceivingCode: Int) {
+    var respondedCode by remember {
+        mutableStateOf("")
+    }
+
     var phoneNumber by remember {
         mutableStateOf("+84")
     }
+
+    if (user == null) {
+        if (numOfReceivingCode == 0) {
+            LoginWithPhoneNumberScreen(
+                phoneNumber,
+                { v -> phoneNumber = v },
+                { phoneAuth.startPhoneNumberVerification(phoneNumber) })
+        } else {
+            VerifyCodeScreen(
+                respondedCode,
+                { v -> respondedCode = v },
+                { phoneAuth.onReceiveRespondedCode(respondedCode) })
+        }
+    } else {
+        Text(text = "Welcome $user")
+    }
+}
+
+@Composable
+fun LoginWithPhoneNumberScreen(
+    phoneNumber: String,
+    onValueChange: (String) -> Unit,
+    onDone: KeyboardActionScope.() -> Unit
+) {
     Surface(
         color = MaterialTheme.colors.background,
         modifier = Modifier
@@ -79,15 +100,13 @@ fun loginWithPhoneNumberScreen(auth: PhoneAuth?) {
             Image(painter = painterResource(id = R.drawable.ic_group_2), null)
             OutlinedTextField(
                 value = phoneNumber,
-                onValueChange = { v -> phoneNumber = v },
+                onValueChange = onValueChange,
                 label = {
                     Text(
                         text = "Nhập số điện thoại"
                     )
                 },
-                keyboardActions = KeyboardActions(onDone = {
-                    auth?.startPhoneNumberVerification(phoneNumber)
-                }),
+                keyboardActions = KeyboardActions(onDone = onDone),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Phone,
                     imeAction = ImeAction.Done
@@ -98,36 +117,36 @@ fun loginWithPhoneNumberScreen(auth: PhoneAuth?) {
 }
 
 @Composable
-fun verifyCodeSentScreen(): String {
-    var inputCode by remember {
-        mutableStateOf("")
-    }
+fun VerifyCodeScreen(
+    codeToVerify: String,
+    onValueChange: (String) -> Unit,
+    onDone: KeyboardActionScope.() -> Unit
+) {
+
     TextField(
-        value = inputCode,
-        onValueChange = { v -> inputCode = v },
-        keyboardActions = KeyboardActions(onDone = {
-        }),
+        value = codeToVerify,
+        onValueChange = onValueChange,
+        keyboardActions = KeyboardActions(onDone = onDone),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done
         ),
         label = { Text("Nhập code nhận được qua SMS") }
     )
-    return inputCode
 }
 
 @Preview(showBackground = true)
 @Composable
-fun loginWithPasswordScreenPreview() {
+fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
-        loginWithPhoneNumberScreen(null)
+        LoginWithPhoneNumberScreen("+84", {}, {})
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun verifyCodeSentScreenPreview() {
+fun VerifyCodeScreenPreview() {
     FirebaseAuthTheme {
-        verifyCodeSentScreen()
+        VerifyCodeScreen("", {}, {})
     }
 }
