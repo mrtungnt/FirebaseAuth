@@ -9,10 +9,18 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import java.util.concurrent.TimeUnit
 
+interface CallbacksToHostFromPhoneAuth {
+    fun notifyCodeSent(
+        verificationId: String,
+        resendingToken: PhoneAuthProvider.ForceResendingToken
+    )
+
+    fun notifySuccessfulLogin(user: FirebaseUser?)
+}
+
 class PhoneAuth(
     private val activity: Activity,
-    var notifyCodeSent: () -> Unit,
-    var notifySuccessfulLogin: (FirebaseUser?) -> Unit,
+    val callbacksToHost: CallbacksToHostFromPhoneAuth
 ) {
     companion object {
         private const val TAG = "PhoneAuthActivity"
@@ -59,7 +67,7 @@ class PhoneAuth(
             // Save verification ID and resending token so we can use them later
             storedVerificationId = verificationId
             resendToken = token
-            notifyCodeSent()
+            callbacksToHost.notifyCodeSent(verificationId, token)
         }
 
         override fun onCodeAutoRetrievalTimeOut(verificationId: String) {
@@ -80,7 +88,7 @@ class PhoneAuth(
         verificationInProgress = true
     }
 
-    fun onReceiveRespondedCode(code: String) {
+    fun onReceiveCodeToVerify(code: String) {
         val credential = PhoneAuthProvider.getCredential(storedVerificationId, code)
         signInWithPhoneAuthCredential(credential)
     }
@@ -93,7 +101,7 @@ class PhoneAuth(
                     Log.d(TAG, "signInWithCredential:success")
 
                     val user = task.result?.user
-                    notifySuccessfulLogin(user)
+                    callbacksToHost.notifySuccessfulLogin(user)
                 } else {
                     // Sign in failed, display a message and update the UI
                     Log.w(TAG, "signInWithCredential:failure", task.exception)
