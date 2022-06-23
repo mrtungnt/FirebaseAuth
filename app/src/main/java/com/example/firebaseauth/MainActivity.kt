@@ -4,10 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,7 +12,6 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -154,32 +150,66 @@ const val VERIFICATION_CODE_LENGTH = 6
 fun VerifyCodeScreen(
     codeToVerify: String,
     onValueChange: (String) -> Unit,
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Nhập code nhận được qua SMS")
+    Column(
+        modifier = modifier.width(IntrinsicSize.Min),
+        horizontalAlignment = Alignment.CenterHorizontally
+    )
+    {
+        Text(
+            "Mã xác thực 6 số đã được gửi qua SMS.",
+            modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
+        )
         TextField(
             value = codeToVerify,
             onValueChange = {
-                onValueChange(it)
+                if (it.length <= VERIFICATION_CODE_LENGTH) {
+                    onValueChange(it)
+                }
                 if (it.length == VERIFICATION_CODE_LENGTH) {
                     onDone()
                 }
             },
-            modifier = Modifier.widthIn(max = 90.dp),
+//            modifier = Modifier.widthIn(max = 90.dp),
             textStyle = TextStyle(textAlign = TextAlign.Center),
-            colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Transparent),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.None
             ),
+            label = {
+                Text(
+                    text = "Nhập mã xác thực",
+//                    style = TextStyle(textAlign = TextAlign.Center)
+                )
+            }
         )
-        Button(onClick = { /*TODO*/ }) {
-            Text(text = "Lấy mã xác thực khác")
+        Spacer(modifier = Modifier.height(10.dp))
+        Divider(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+        )
+//        Divider(Modifier.height(1.dp).background(Color.LightGray))
+        Spacer(
+            modifier = Modifier.height(5.dp)
+        )
+        Column(
+            modifier = modifier
+                .width(IntrinsicSize.Max),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(onClick = { /*TODO*/ }, Modifier.fillMaxWidth()) {
+                Text(text = "Lấy mã xác thực khác")
+            }
+            Button(onClick = { /*TODO*/ }, Modifier.fillMaxWidth()) {
+                Text(text = "Xác thực bằng số điện thoại khác")
+            }
         }
     }
-//    }
+
 }
 
 @Preview(showBackground = true)
