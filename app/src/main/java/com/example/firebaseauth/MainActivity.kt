@@ -23,8 +23,6 @@ import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 
 class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
@@ -36,41 +34,38 @@ class MainActivity : ComponentActivity() {
         super.onRestoreInstanceState(savedInstanceState)
     }
 
-    var verificationId by mutableStateOf("")
-    var resendingToken by mutableStateOf(PhoneAuthProvider.ForceResendingToken.zza())
-    var userLoggedIn by mutableStateOf(Firebase.auth.currentUser != null)
-    private val self = this
+    val authViewModel = AuthViewModel(AuthState())
 
     private val callbacks = object : CallbacksToHostFromPhoneAuth {
         override fun notifyCodeSent(
             verificationId: String,
             resendingToken: PhoneAuthProvider.ForceResendingToken
         ) {
-            self.verificationId = verificationId
-            self.resendingToken = resendingToken
+            authViewModel.onCodeSent(verificationId, resendingToken)
         }
 
         override fun notifySuccessfulLogin(user: FirebaseUser?) {
-            self.userLoggedIn = user != null
+            authViewModel.onSuccessfulLogin(user)
         }
     }
 
     val phoneAuth =
-        PhoneAuth(self, callbacks)
+        PhoneAuth(this@MainActivity, callbacks)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+//        FirebaseAuth.getInstance().useEmulator("192.168.31.145", 9099)
 
         setContent {
             FirebaseAuthTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
+//                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    HomeScreen(this)
+                    AuthHomeScreen(this@MainActivity, authViewModel)
                 }
             }
         }
@@ -78,7 +73,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HomeScreen(mainActivity: MainActivity) {
+fun AuthHomeScreen(mainActivity: MainActivity, authViewModel: AuthViewModel) {
+    val authState = authViewModel.authStateFlow.collectAsState()
     var codeToVerify by remember {
         mutableStateOf("")
     }
@@ -87,18 +83,15 @@ fun HomeScreen(mainActivity: MainActivity) {
         mutableStateOf("+84")
     }
 
-    if (mainActivity.userLoggedIn) {
+    if (authState.value.userLoggedIn) {
         Column() {
-            Text(text = "Welcome ${Firebase.auth.currentUser}")
-            Button(onClick = {
-                Firebase.auth.signOut(); mainActivity.userLoggedIn =
-                false; mainActivity.verificationId = ""
-            }) {
+            Text(text = "Welcome ${authViewModel.getCurrentUser()}")
+            Button(onClick = authViewModel::logUserOut) {
                 Text(text = "Sign out")
             }
         }
     } else {
-        if (mainActivity.verificationId.compareTo("") == 0) {
+        if (authState.value.verificationId.compareTo("") == 0) {
             LoginWithPhoneNumberScreen(
                 phoneNumber,
                 { phoneNumber = it },
@@ -154,7 +147,7 @@ fun VerifyCodeScreen(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.width(IntrinsicSize.Min),
+        modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = Alignment.CenterHorizontally
     )
     {
