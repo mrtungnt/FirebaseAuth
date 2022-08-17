@@ -71,19 +71,24 @@ class PhoneAuth(
         }
 
         override fun onCodeAutoRetrievalTimeOut(verificationId: String) {
-
+            Log.d(TAG, "onCodeAutoRetrievalTimeOut:$verificationId")
         }
     }
 
     var verificationInProgress: Boolean = false
 
-    fun startPhoneNumberVerification(phoneNumber: String) {
+    fun startPhoneNumberVerification(
+        phoneNumber: String,
+        resendToken: PhoneAuthProvider.ForceResendingToken
+    ) {
         val options = PhoneAuthOptions.newBuilder(auth)
+            .setForceResendingToken(resendToken)
             .setPhoneNumber(phoneNumber)       // Phone number to verify
             .setTimeout(60L, TimeUnit.SECONDS) // Timeout and unit
             .setActivity(activity)                 // Activity (for callback binding)
-            .setCallbacks(callbacks)          // OnVerificationStateChangedCallbacks
+            .setCallbacks(callbacks)          //
             .build()
+
         PhoneAuthProvider.verifyPhoneNumber(options)
         verificationInProgress = true
     }

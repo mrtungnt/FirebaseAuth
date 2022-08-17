@@ -55,14 +55,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+//        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
 //        FirebaseAuth.getInstance().useEmulator("192.168.31.145", 9099)
 
         setContent {
             FirebaseAuthTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
-//                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
                     AuthHomeScreen(this@MainActivity, authViewModel)
@@ -74,7 +74,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AuthHomeScreen(mainActivity: MainActivity, authViewModel: AuthViewModel) {
-    val authState = authViewModel.authStateFlow.collectAsState()
+    fun hasUserLoggedIn(authState: AuthState) = authState.user != null
+    val authStateFromFlow = authViewModel.authStateFlow.collectAsState()
     var codeToVerify by remember {
         mutableStateOf("")
     }
@@ -83,19 +84,24 @@ fun AuthHomeScreen(mainActivity: MainActivity, authViewModel: AuthViewModel) {
         mutableStateOf("+84")
     }
 
-    if (authState.value.userLoggedIn) {
+    if (hasUserLoggedIn(authStateFromFlow.value)) {
         Column() {
-            Text(text = "Welcome ${authViewModel.getCurrentUser()}")
+            Text(text = "Welcome ${authStateFromFlow.value.user}")
             Button(onClick = authViewModel::logUserOut) {
                 Text(text = "Sign out")
             }
         }
     } else {
-        if (authState.value.verificationId.compareTo("") == 0) {
+        if (authStateFromFlow.value.verificationId.compareTo("") == 0) {
             LoginWithPhoneNumberScreen(
                 phoneNumber,
                 { phoneNumber = it },
-                { mainActivity.phoneAuth.startPhoneNumberVerification(phoneNumber) })
+                {
+                    mainActivity.phoneAuth.startPhoneNumberVerification(
+                        phoneNumber,
+                        authStateFromFlow.value.resendingToken
+                    )
+                })
         } else {
             VerifyCodeScreen(
                 codeToVerify,
@@ -189,18 +195,15 @@ fun VerifyCodeScreen(
         Spacer(
             modifier = Modifier.height(5.dp)
         )
-        Column(
-            modifier = modifier
-                .width(IntrinsicSize.Max),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Button(onClick = { /*TODO*/ }, Modifier.fillMaxWidth()) {
-                Text(text = "Lấy mã xác thực khác")
-            }
-            Button(onClick = { /*TODO*/ }, Modifier.fillMaxWidth()) {
+        /* Column(
+             modifier = modifier
+                 .width(IntrinsicSize.Max),
+             horizontalAlignment = Alignment.CenterHorizontally
+         ) {
+             Button(onClick = {  }, Modifier.fillMaxWidth()) {
                 Text(text = "Xác thực bằng số điện thoại khác")
             }
-        }
+        }*/
     }
 
 }

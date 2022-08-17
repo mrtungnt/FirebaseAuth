@@ -26,13 +26,11 @@ class AuthViewModel(authState: AuthState) {
     }
 
     fun onSuccessfulLogin(user: FirebaseUser?) {
-        _authStateFlow.update { it.copy(userLoggedIn = user != null) }
+        _authStateFlow.update { it.copy(user = user) }
     }
 
     fun logUserOut() {
         Firebase.auth.signOut()
-        _authStateFlow.update { it.copy(userLoggedIn = false, verificationId = "") }
+        _authStateFlow.update { it.copy(user = Firebase.auth.currentUser, verificationId = "") }
     }
-
-    fun getCurrentUser() = Firebase.auth.currentUser
 }
