@@ -2,6 +2,8 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'com.google.gms.google-services'
+    id 'com.google.dagger.hilt.android'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -68,4 +70,8 @@ dependencies {
     // Declare the dependency for the Firebase Authentication library
     // When using the BoM, you don't specify versions in Firebase library dependencies
     implementation 'com.google.firebase:firebase-auth-ktx'
+
+    implementation "com.google.dagger:hilt-android:$hilt_version"
+    kapt "com.google.dagger:hilt-compiler:$hilt_version"
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1'
 }

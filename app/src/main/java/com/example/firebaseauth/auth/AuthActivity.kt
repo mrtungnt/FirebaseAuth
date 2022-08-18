@@ -1,8 +1,9 @@
-package com.example.firebaseauth
+package com.example.firebaseauth.auth
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActionScope
@@ -19,22 +20,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.firebaseauth.R
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
-class MainActivity : ComponentActivity() {
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-//        outState.putBoolean("VerificationInProgress", verificationInProgress)
-    }
-
-    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
-        super.onRestoreInstanceState(savedInstanceState)
-    }
-
-    val authViewModel = AuthViewModel(AuthState())
+@AndroidEntryPoint
+class AuthActivity : ComponentActivity() {
+    val authViewModel by viewModels<AuthViewModel>()
 
     private val callbacks = object : CallbacksToHostFromPhoneAuth {
         override fun notifyCodeSent(
@@ -49,14 +44,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    val phoneAuth =
-        PhoneAuth(this@MainActivity, callbacks)
+    @Inject
+    lateinit var phoneAuth: PhoneAuth
+
+   /* init {
+        phoneAuth.apply { setActivity(this@AuthActivity);setCallbacks(callbacks) }
+    }*/
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
-//        FirebaseAuth.getInstance().useEmulator("192.168.31.145", 9099)
 
         setContent {
             FirebaseAuthTheme {
@@ -65,7 +63,21 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    AuthHomeScreen(this@MainActivity, authViewModel)
+                    /*val authViewModel = viewModel<AuthViewModel>()
+                    val callbacks = object : CallbacksToHostFromPhoneAuth {
+                        override fun notifyCodeSent(
+                            verificationId: String,
+                            resendingToken: PhoneAuthProvider.ForceResendingToken
+                        ) {
+                            authViewModel.onCodeSent(verificationId, resendingToken)
+                        }
+
+                        override fun notifySuccessfulLogin(user: FirebaseUser?) {
+                            authViewModel.onSuccessfulLogin(user)
+                        }
+                    }*/
+                    phoneAuth.apply { setActivity(this@AuthActivity);setCallbacks(callbacks) }
+                    AuthHomeScreen(this@AuthActivity, authViewModel)
                 }
             }
         }
@@ -73,7 +85,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AuthHomeScreen(mainActivity: MainActivity, authViewModel: AuthViewModel) {
+fun AuthHomeScreen(activity: AuthActivity, authViewModel: AuthViewModel) {
     fun hasUserLoggedIn(authState: AuthState) = authState.user != null
     val authStateFromFlow = authViewModel.authStateFlow.collectAsState()
     var codeToVerify by remember {
@@ -97,7 +109,7 @@ fun AuthHomeScreen(mainActivity: MainActivity, authViewModel: AuthViewModel) {
                 phoneNumber,
                 { phoneNumber = it },
                 {
-                    mainActivity.phoneAuth.startPhoneNumberVerification(
+                    activity.phoneAuth.startPhoneNumberVerification(
                         phoneNumber,
                         authStateFromFlow.value.resendingToken
                     )
@@ -106,7 +118,7 @@ fun AuthHomeScreen(mainActivity: MainActivity, authViewModel: AuthViewModel) {
             VerifyCodeScreen(
                 codeToVerify,
                 { codeToVerify = it },
-                { mainActivity.phoneAuth.onReceiveCodeToVerify(codeToVerify) })
+                { activity.phoneAuth.onReceiveCodeToVerify(codeToVerify) })
         }
     }
 }

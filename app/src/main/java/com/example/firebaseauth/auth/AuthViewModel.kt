@@ -1,14 +1,20 @@
-package com.example.firebaseauth
+package com.example.firebaseauth.auth
 
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import javax.inject.Inject
 
-class AuthViewModel(authState: AuthState) {
+@HiltViewModel
+class AuthViewModel @Inject constructor(authState: AuthState, private val state: SavedStateHandle) :
+    ViewModel() {
     private val _authStateFlow = MutableStateFlow(authState)
     val authStateFlow: StateFlow<AuthState>
         get() = _authStateFlow

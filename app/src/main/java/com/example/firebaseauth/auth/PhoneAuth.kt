@@ -1,13 +1,14 @@
-package com.example.firebaseauth
+package com.example.firebaseauth.auth
 
-import android.app.Activity
 import android.util.Log
+import androidx.activity.ComponentActivity
 import com.google.firebase.FirebaseException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 interface CallbacksToHostFromPhoneAuth {
     fun notifyCodeSent(
@@ -18,12 +19,21 @@ interface CallbacksToHostFromPhoneAuth {
     fun notifySuccessfulLogin(user: FirebaseUser?)
 }
 
-class PhoneAuth(
-    private val activity: Activity,
-    val callbacksToHost: CallbacksToHostFromPhoneAuth
-) {
+class PhoneAuth @Inject constructor() {
+    private lateinit var activity: ComponentActivity
+    private lateinit var callbacksToHost: CallbacksToHostFromPhoneAuth
+
+
     companion object {
         private const val TAG = "PhoneAuthActivity"
+    }
+
+    fun setActivity(activity: ComponentActivity) {
+        this.activity = activity
+    }
+
+    fun setCallbacks(callbacksToHost: CallbacksToHostFromPhoneAuth) {
+        this.callbacksToHost = callbacksToHost
     }
 
     private val auth: FirebaseAuth = Firebase.auth
@@ -75,8 +85,6 @@ class PhoneAuth(
         }
     }
 
-    var verificationInProgress: Boolean = false
-
     fun startPhoneNumberVerification(
         phoneNumber: String,
         resendToken: PhoneAuthProvider.ForceResendingToken
@@ -90,7 +98,6 @@ class PhoneAuth(
             .build()
 
         PhoneAuthProvider.verifyPhoneNumber(options)
-        verificationInProgress = true
     }
 
     fun onReceiveCodeToVerify(code: String) {
