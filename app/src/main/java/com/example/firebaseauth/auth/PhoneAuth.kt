@@ -17,6 +17,14 @@ interface CallbacksToHostFromPhoneAuth {
     )
 
     fun notifySuccessfulLogin(user: FirebaseUser?)
+
+    fun notifyPhoneNumberException(exception: FirebaseAuthInvalidCredentialsException)
+
+    fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
+
+    fun notifyVerificationProgress(progress: Boolean)
+
+    fun notifyLoggingProgress(progress: Boolean)
 }
 
 class PhoneAuth @Inject constructor() {
@@ -57,7 +65,7 @@ class PhoneAuth @Inject constructor() {
             Log.w(TAG, "onVerificationFailed", e)
 
             if (e is FirebaseAuthInvalidCredentialsException) {
-                // Invalid request
+                callbacksToHost.notifyPhoneNumberException(e)
             } else if (e is FirebaseTooManyRequestsException) {
                 // The SMS quota for the project has been exceeded
             }
@@ -98,11 +106,13 @@ class PhoneAuth @Inject constructor() {
             .build()
 
         PhoneAuthProvider.verifyPhoneNumber(options)
+        callbacksToHost.notifyVerificationProgress(true)
     }
 
     fun onReceiveCodeToVerify(code: String) {
         val credential = PhoneAuthProvider.getCredential(storedVerificationId, code)
         signInWithPhoneAuthCredential(credential)
+        callbacksToHost.notifyVerificationProgress(false)
     }
 
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
@@ -118,6 +128,8 @@ class PhoneAuth @Inject constructor() {
                     // Sign in failed, display a message and update the UI
                     Log.w(TAG, "signInWithCredential:failure", task.exception)
                     if (task.exception is FirebaseAuthInvalidCredentialsException) {
+                        callbacksToHost.notifyVerificationCodeException(task.exception as FirebaseAuthInvalidCredentialsException)
+
                         // The verification code entered was invalid
                     }
                     // Update UI
