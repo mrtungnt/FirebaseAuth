@@ -10,7 +10,7 @@ import com.google.firebase.ktx.Firebase
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-interface CallbacksToHostFromPhoneAuth {
+interface CallbacksFromPhoneAuthToHost {
     fun notifyCodeSent(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
@@ -29,7 +29,7 @@ interface CallbacksToHostFromPhoneAuth {
 
 class PhoneAuth @Inject constructor() {
     private lateinit var activity: ComponentActivity
-    private lateinit var callbacksToHost: CallbacksToHostFromPhoneAuth
+    private lateinit var callbacksToHost: CallbacksFromPhoneAuthToHost
 
 
     companion object {
@@ -40,7 +40,7 @@ class PhoneAuth @Inject constructor() {
         this.activity = activity
     }
 
-    fun setCallbacks(callbacksToHost: CallbacksToHostFromPhoneAuth) {
+    fun setCallbacks(callbacksToHost: CallbacksFromPhoneAuthToHost) {
         this.callbacksToHost = callbacksToHost
     }
 

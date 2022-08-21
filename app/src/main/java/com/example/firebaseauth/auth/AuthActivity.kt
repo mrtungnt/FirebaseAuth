@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,7 +48,7 @@ class AuthActivity : ComponentActivity() {
                 ) {
                     val authViewModel = viewModel<AuthViewModel>()
                     val callbacks = remember {
-                        object : CallbacksToHostFromPhoneAuth {
+                        object : CallbacksFromPhoneAuthToHost {
                             override fun notifyCodeSent(
                                 verificationId: String,
                                 resendingToken: PhoneAuthProvider.ForceResendingToken
@@ -76,7 +77,7 @@ class AuthActivity : ComponentActivity() {
                             }
                         }
                     }
-                    val phoneAuth = remember {
+                    val phoneAuth = rememberSaveable {
                         PhoneAuth().apply { setActivity(this@AuthActivity);setCallbacks(callbacks) }
                     }
                     AuthHomeScreen(authViewModel, phoneAuth)
