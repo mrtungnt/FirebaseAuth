@@ -1,6 +1,7 @@
 package com.example.firebaseauth.auth
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -78,9 +79,14 @@ class AuthActivity : ComponentActivity() {
                         }
                     }
                     val phoneAuth = rememberSaveable {
-                        PhoneAuth().apply { setActivity(this@AuthActivity);setCallbacks(callbacks) }
+                        Log.d("Init phoneAuth", "---")
+                        PhoneAuth(
+                        ).apply { activity = this@AuthActivity;setCallbacks(callbacks) }
                     }
-                    AuthHomeScreen(authViewModel, phoneAuth)
+                    if (phoneAuth.activity == null)
+                        Text(text = "phoneAuth.activity == null")
+                    else
+                        AuthHomeScreen(authViewModel, phoneAuth)
                 }
             }
         }

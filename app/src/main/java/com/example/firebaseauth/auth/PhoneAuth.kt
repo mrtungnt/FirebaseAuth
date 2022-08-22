@@ -11,7 +11,6 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
 
 abstract class CallbacksFromPhoneAuthToHost {
     open fun notifyCodeSent(
@@ -32,9 +31,13 @@ abstract class CallbacksFromPhoneAuthToHost {
 }
 
 @Parcelize
-class PhoneAuth @Inject constructor() : Parcelable {
+class PhoneAuth(
+    /*private var activity: @RawValue ComponentActivity,
+    private var callbacksToHost: @RawValue CallbacksFromPhoneAuthToHost*/
+) : Parcelable {
     @IgnoredOnParcel
-    private lateinit var activity: ComponentActivity
+    var activity: ComponentActivity? = null
+
     @IgnoredOnParcel
     private lateinit var callbacksToHost: CallbacksFromPhoneAuthToHost
 
@@ -42,9 +45,9 @@ class PhoneAuth @Inject constructor() : Parcelable {
         private const val TAG = "PhoneAuthActivity"
     }
 
-    fun setActivity(activity: ComponentActivity) {
+    /*fun setActivity(activity: ComponentActivity) {
         this.activity = activity
-    }
+    }*/
 
     fun setCallbacks(callbacksToHost: CallbacksFromPhoneAuthToHost) {
         this.callbacksToHost = callbacksToHost
@@ -55,6 +58,7 @@ class PhoneAuth @Inject constructor() : Parcelable {
 
     @IgnoredOnParcel
     private lateinit var storedVerificationId: String
+
     @IgnoredOnParcel
     private lateinit var resendToken: PhoneAuthProvider.ForceResendingToken
 
@@ -111,7 +115,7 @@ class PhoneAuth @Inject constructor() : Parcelable {
             .setForceResendingToken(resendToken)
             .setPhoneNumber(phoneNumber)       // Phone number to verify
             .setTimeout(60L, TimeUnit.SECONDS) // Timeout and unit
-            .setActivity(activity)                 // Activity (for callback binding)
+            .setActivity(activity!!)                 // Activity (for callback binding)
             .setCallbacks(callbacks)          //
             .build()
 
@@ -127,7 +131,7 @@ class PhoneAuth @Inject constructor() : Parcelable {
 
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
         auth.signInWithCredential(credential)
-            .addOnCompleteListener(activity) { task ->
+            .addOnCompleteListener(activity!!) { task ->
                 if (task.isSuccessful) {
                     // Sign in success, update UI with the signed-in user's information
                     Log.d(TAG, "signInWithCredential:success")
