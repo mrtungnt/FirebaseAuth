@@ -48,7 +48,7 @@ class AuthActivity : ComponentActivity() {
                 ) {
                     val authViewModel = viewModel<AuthViewModel>()
                     val callbacks = remember {
-                        object : CallbacksFromPhoneAuthToHost {
+                        object : CallbacksFromPhoneAuthToHost() {
                             override fun notifyCodeSent(
                                 verificationId: String,
                                 resendingToken: PhoneAuthProvider.ForceResendingToken
@@ -72,9 +72,9 @@ class AuthActivity : ComponentActivity() {
                                 authViewModel.onVerificationProgressNotification(progress)
                             }
 
-                            override fun notifyLoggingProgress(progress: Boolean) {
-                                TODO("Not yet implemented")
-                            }
+                            /* override fun notifyLoggingProgress(progress: Boolean) {
+                                 TODO("Not yet implemented")
+                             }*/
                         }
                     }
                     val phoneAuth = rememberSaveable {
@@ -90,11 +90,11 @@ class AuthActivity : ComponentActivity() {
 @Composable
 fun AuthHomeScreen(authViewModel: AuthViewModel, phoneAuth: PhoneAuth) {
     val authStateFromFlow by authViewModel.authStateFlow.collectAsState()
-    var codeToVerify by remember {
+    var codeToVerify by rememberSaveable {
         mutableStateOf("")
     }
 
-    var phoneNumber by remember {
+    var phoneNumber by rememberSaveable {
         mutableStateOf("+84")
     }
 

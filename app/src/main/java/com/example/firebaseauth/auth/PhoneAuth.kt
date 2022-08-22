@@ -1,5 +1,6 @@
 package com.example.firebaseauth.auth
 
+import android.os.Parcelable
 import android.util.Log
 import androidx.activity.ComponentActivity
 import com.google.firebase.FirebaseException
@@ -7,30 +8,35 @@ import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.parcelize.IgnoredOnParcel
+import kotlinx.parcelize.Parcelize
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-interface CallbacksFromPhoneAuthToHost {
-    fun notifyCodeSent(
+abstract class CallbacksFromPhoneAuthToHost {
+    open fun notifyCodeSent(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
-    )
+    ) {
+    }
 
-    fun notifySuccessfulLogin(user: FirebaseUser?)
+    abstract fun notifySuccessfulLogin(user: FirebaseUser?)
 
-    fun notifyPhoneNumberException(exception: FirebaseAuthInvalidCredentialsException)
+    open fun notifyPhoneNumberException(exception: FirebaseAuthInvalidCredentialsException) {}
 
-    fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
+    abstract fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
 
-    fun notifyVerificationProgress(progress: Boolean)
+    open fun notifyVerificationProgress(progress: Boolean) {}
 
-    fun notifyLoggingProgress(progress: Boolean)
+    open fun notifyLoggingProgress(progress: Boolean) {}
 }
 
-class PhoneAuth @Inject constructor() {
+@Parcelize
+class PhoneAuth @Inject constructor() : Parcelable {
+    @IgnoredOnParcel
     private lateinit var activity: ComponentActivity
+    @IgnoredOnParcel
     private lateinit var callbacksToHost: CallbacksFromPhoneAuthToHost
-
 
     companion object {
         private const val TAG = "PhoneAuthActivity"
@@ -44,11 +50,15 @@ class PhoneAuth @Inject constructor() {
         this.callbacksToHost = callbacksToHost
     }
 
+    @IgnoredOnParcel
     private val auth: FirebaseAuth = Firebase.auth
 
+    @IgnoredOnParcel
     private lateinit var storedVerificationId: String
+    @IgnoredOnParcel
     private lateinit var resendToken: PhoneAuthProvider.ForceResendingToken
 
+    @IgnoredOnParcel
     private var callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
         override fun onVerificationCompleted(credential: PhoneAuthCredential) {
             // This callback will be invoked in two situations:
