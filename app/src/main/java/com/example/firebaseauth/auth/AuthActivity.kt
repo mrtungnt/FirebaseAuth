@@ -1,7 +1,6 @@
 package com.example.firebaseauth.auth
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.R
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
+import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseUser
@@ -54,23 +54,23 @@ class AuthActivity : ComponentActivity() {
                                 verificationId: String,
                                 resendingToken: PhoneAuthProvider.ForceResendingToken
                             ) {
-                                authViewModel.onCodeSent(verificationId, resendingToken)
+                                authViewModel.notifyCodeSent(verificationId, resendingToken)
                             }
 
                             override fun notifySuccessfulLogin(user: FirebaseUser?) {
-                                authViewModel.onSuccessfulLogin(user)
+                                authViewModel.notifySuccessfulLogin(user)
                             }
 
-                            override fun notifyPhoneNumberException(exception: FirebaseAuthInvalidCredentialsException) {
-                                authViewModel.onPhoneNumberException(exception)
+                            override fun notifyPhoneNumberException(exception: FirebaseException) {
+                                authViewModel.notifyPhoneNumberException(exception)
                             }
 
                             override fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException) {
-                                authViewModel.onVerificationCodeException(exception)
+                                authViewModel.notifyVerificationCodeException(exception)
                             }
 
                             override fun notifyVerificationProgress(progress: Boolean) {
-                                authViewModel.onVerificationProgressNotification(progress)
+                                authViewModel.notifyVerificationProgress(progress)
                             }
 
                             /* override fun notifyLoggingProgress(progress: Boolean) {
@@ -78,15 +78,15 @@ class AuthActivity : ComponentActivity() {
                              }*/
                         }
                     }
-                    val phoneAuth = rememberSaveable {
-                        Log.d("Init phoneAuth", "---")
+
+                    val phoneAuth = remember {
                         PhoneAuth(
-                        ).apply { activity = this@AuthActivity;setCallbacks(callbacks) }
+                            activity = this@AuthActivity,
+                            callbacks,
+                        )
                     }
-                    if (phoneAuth.activity == null)
-                        Text(text = "phoneAuth.activity == null")
-                    else
-                        AuthHomeScreen(authViewModel, phoneAuth)
+
+                    AuthHomeScreen(authViewModel, phoneAuth)
                 }
             }
         }
@@ -123,13 +123,15 @@ fun AuthHomeScreen(authViewModel: AuthViewModel, phoneAuth: PhoneAuth) {
                         phoneNumber,
                         authStateFromFlow.resendingToken
                     )
-                }, authStateFromFlow.waitingForVerificationCode
+                },
+                authStateFromFlow.waitingForVerificationCode,
+                authStateFromFlow.phoneNumberException,
             )
         } else {
             VerifyCodeScreen(
                 codeToVerify,
                 { codeToVerify = it },
-                { phoneAuth.onReceiveCodeToVerify(codeToVerify) },
+                { phoneAuth.onReceiveCodeToVerify(authStateFromFlow.verificationId, codeToVerify) },
                 authStateFromFlow.verificationCodeException,
                 authViewModel::clearVerificationCodeException
             )
@@ -142,7 +144,8 @@ fun LoginWithPhoneNumberScreen(
     phoneNumber: String,
     onValueChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
-    waitingForVerificationCode: Boolean
+    waitingForVerificationCode: Boolean,
+    exceptionOrNull: FirebaseException?,
 ) {
     Surface(
         color = MaterialTheme.colors.background,
@@ -166,17 +169,29 @@ fun LoginWithPhoneNumberScreen(
                     imeAction = ImeAction.Done
                 )
             )
-
-            if (waitingForVerificationCode) {
-                Column {
-                    CircularProgressIndicator()
-                    Divider(Modifier.height(3.dp))
-                    Text(text = "Chờ mã xác minh")
+            if (hasException(exceptionOrNull)) {
+                Box(
+                    Modifier
+                        .padding(10.dp)
+                        .border(BorderStroke(3.dp, Color.Blue))
+                        .wrapContentSize()
+                ) {
+                    Text(text = exceptionOrNull?.message!!, Modifier.padding(10.dp))
                 }
-            }
+            } else
+                if (waitingForVerificationCode) {
+                    Column {
+                        CircularProgressIndicator()
+                        Divider(Modifier.height(3.dp))
+                        Text(text = "Chờ mã xác minh")
+                    }
+                }
         }
     }
 }
+
+fun hasException(e: FirebaseException?) = e != null
+
 
 const val VERIFICATION_CODE_LENGTH = 6
 
@@ -185,7 +200,7 @@ fun VerifyCodeScreen(
     codeToVerify: String,
     onValueChange: (String) -> Unit,
     onDone: () -> Unit,
-    exception: FirebaseAuthException? = null,
+    exceptionOrNull: FirebaseAuthException? = null,
     clearException: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -198,12 +213,11 @@ fun VerifyCodeScreen(
             "Mã xác thực 6 số đã được gửi qua SMS.",
             modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
         )
-        fun hasException() = exception != null
         TextField(
             value = codeToVerify,
             onValueChange = {
                 if (it.length <= VERIFICATION_CODE_LENGTH) {
-                    if (hasException()) clearException()
+                    if (hasException(exceptionOrNull)) clearException()
                     onValueChange(it)
                 }
                 if (it.length == VERIFICATION_CODE_LENGTH) {
@@ -243,14 +257,14 @@ fun VerifyCodeScreen(
                 Text(text = "Xác thực bằng số điện thoại khác")
             }
         }*/
-        if (hasException()) {
+        if (hasException(exceptionOrNull)) {
             Box(
                 Modifier
                     .padding(10.dp)
                     .border(BorderStroke(3.dp, Color.Blue))
                     .wrapContentSize()
             ) {
-                Text(text = exception?.message!!, Modifier.padding(10.dp))
+                Text(text = exceptionOrNull?.message!!, Modifier.padding(10.dp))
             }
         }
     }
@@ -261,7 +275,7 @@ fun VerifyCodeScreen(
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
-        LoginWithPhoneNumberScreen("+84", {}, {}, false)
+        LoginWithPhoneNumberScreen("+84", {}, {}, false, null)
     }
 }
 

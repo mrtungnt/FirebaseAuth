@@ -12,57 +12,53 @@ import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import java.util.concurrent.TimeUnit
 
-abstract class CallbacksFromPhoneAuthToHost {
-    open fun notifyCodeSent(
+interface PhoneAuthNotification {
+    fun notifySuccessfulLogin(user: FirebaseUser?)
+
+    fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
+
+    fun notifyCodeSent(
+        verificationId: String,
+        resendingToken: PhoneAuthProvider.ForceResendingToken
+    )
+
+    fun notifyPhoneNumberException(exception: FirebaseException)
+
+    fun notifyVerificationProgress(progress: Boolean)
+
+    fun notifyLoggingProgress(progress: Boolean)
+}
+
+abstract class CallbacksFromPhoneAuthToHost : PhoneAuthNotification {
+    abstract override fun notifySuccessfulLogin(user: FirebaseUser?)
+
+    abstract override fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
+
+    override fun notifyCodeSent(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
     ) {
     }
 
-    abstract fun notifySuccessfulLogin(user: FirebaseUser?)
+    override fun notifyPhoneNumberException(exception: FirebaseException) {}
 
-    open fun notifyPhoneNumberException(exception: FirebaseAuthInvalidCredentialsException) {}
+    override fun notifyVerificationProgress(progress: Boolean) {}
 
-    abstract fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
-
-    open fun notifyVerificationProgress(progress: Boolean) {}
-
-    open fun notifyLoggingProgress(progress: Boolean) {}
+    override fun notifyLoggingProgress(progress: Boolean) {}
 }
 
-@Parcelize
 class PhoneAuth(
-    /*private var activity: @RawValue ComponentActivity,
-    private var callbacksToHost: @RawValue CallbacksFromPhoneAuthToHost*/
-) : Parcelable {
-    @IgnoredOnParcel
-    var activity: ComponentActivity? = null
-
-    @IgnoredOnParcel
-    private lateinit var callbacksToHost: CallbacksFromPhoneAuthToHost
-
+    private val activity: ComponentActivity,
+    private val callbacksToHost: CallbacksFromPhoneAuthToHost,
+) {
     companion object {
         private const val TAG = "PhoneAuthActivity"
     }
 
-    /*fun setActivity(activity: ComponentActivity) {
-        this.activity = activity
-    }*/
-
-    fun setCallbacks(callbacksToHost: CallbacksFromPhoneAuthToHost) {
-        this.callbacksToHost = callbacksToHost
-    }
-
-    @IgnoredOnParcel
     private val auth: FirebaseAuth = Firebase.auth
 
-    @IgnoredOnParcel
-    private lateinit var storedVerificationId: String
-
-    @IgnoredOnParcel
     private lateinit var resendToken: PhoneAuthProvider.ForceResendingToken
 
-    @IgnoredOnParcel
     private var callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
         override fun onVerificationCompleted(credential: PhoneAuthCredential) {
             // This callback will be invoked in two situations:
@@ -78,13 +74,12 @@ class PhoneAuth(
         override fun onVerificationFailed(e: FirebaseException) {
             Log.w(TAG, "onVerificationFailed", e)
 
-            if (e is FirebaseAuthInvalidCredentialsException) {
-                callbacksToHost.notifyPhoneNumberException(e)
-            } else if (e is FirebaseTooManyRequestsException) {
-                // The SMS quota for the project has been exceeded
+            when (e) {
+                is FirebaseTooManyRequestsException -> {} // The SMS quota for the project has been exceeded
+                else -> {
+                    callbacksToHost.notifyPhoneNumberException(e)
+                }
             }
-
-            // Show a message and update the UI
         }
 
         override fun onCodeSent(
@@ -96,8 +91,7 @@ class PhoneAuth(
             // by combining the code with a verification ID.
             Log.d(TAG, "onCodeSent:$verificationId")
 
-            // Save verification ID and resending token so we can use them later
-            storedVerificationId = verificationId
+            // Save resending token so we can use it later
             resendToken = token
             callbacksToHost.notifyCodeSent(verificationId, token)
         }
@@ -115,7 +109,7 @@ class PhoneAuth(
             .setForceResendingToken(resendToken)
             .setPhoneNumber(phoneNumber)       // Phone number to verify
             .setTimeout(60L, TimeUnit.SECONDS) // Timeout and unit
-            .setActivity(activity!!)                 // Activity (for callback binding)
+            .setActivity(activity)                 // Activity (for callback binding)
             .setCallbacks(callbacks)          //
             .build()
 
@@ -123,15 +117,15 @@ class PhoneAuth(
         callbacksToHost.notifyVerificationProgress(true)
     }
 
-    fun onReceiveCodeToVerify(code: String) {
-        val credential = PhoneAuthProvider.getCredential(storedVerificationId, code)
+    fun onReceiveCodeToVerify(verificationId: String, code: String) {
+        val credential = PhoneAuthProvider.getCredential(verificationId, code)
         signInWithPhoneAuthCredential(credential)
         callbacksToHost.notifyVerificationProgress(false)
     }
 
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
         auth.signInWithCredential(credential)
-            .addOnCompleteListener(activity!!) { task ->
+            .addOnCompleteListener(activity) { task ->
                 if (task.isSuccessful) {
                     // Sign in success, update UI with the signed-in user's information
                     Log.d(TAG, "signInWithCredential:success")
@@ -143,7 +137,6 @@ class PhoneAuth(
                     Log.w(TAG, "signInWithCredential:failure", task.exception)
                     if (task.exception is FirebaseAuthInvalidCredentialsException) {
                         callbacksToHost.notifyVerificationCodeException(task.exception as FirebaseAuthInvalidCredentialsException)
-
                         // The verification code entered was invalid
                     }
                     // Update UI

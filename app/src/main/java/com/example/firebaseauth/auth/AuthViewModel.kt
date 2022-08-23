@@ -2,6 +2,7 @@ package com.example.firebaseauth.auth
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
@@ -18,65 +19,55 @@ class AuthViewModel @Inject constructor(
     private val authState: AuthUIState,
     private val state: SavedStateHandle
 ) :
-    ViewModel() {
+    ViewModel(), PhoneAuthNotification {
     private val stateKeyName = "savedUIState"
-
-    //    private val _authStateFlow = MutableStateFlow(authState)
-//    val authStateFlow = _authStateFlow.asStateFlow()
     val authStateFlow = state.getStateFlow(stateKeyName, authState)
 
-    fun onCodeSent(
+    fun logUserOut() {
+        Firebase.auth.signOut()
+        state[stateKeyName] =
+            authState.copy(user = Firebase.auth.currentUser)
+    }
+
+    fun clearVerificationCodeException() {
+        state[stateKeyName] = authStateFlow.value.copy(
+            verificationCodeException = null
+        )
+    }
+
+    override fun notifySuccessfulLogin(user: FirebaseUser?) {
+        state[stateKeyName] = authStateFlow.value.copy(user = user)
+    }
+
+    override fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException) {
+        state[stateKeyName] = authStateFlow.value.copy(
+            verificationCodeException = exception
+        )
+    }
+
+    override fun notifyCodeSent(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
     ) {
-        /*_authStateFlow.update {
-            it.copy(
-                verificationId = verificationId,
-                resendingToken = resendingToken
-            )
-        }*/
         state[stateKeyName] = authStateFlow.value.copy(
             verificationId = verificationId,
             resendingToken = resendingToken
         )
     }
 
-    fun onSuccessfulLogin(user: FirebaseUser?) {
-//        _authStateFlow.update { it.copy(user = user) }
-        state[stateKeyName] = authStateFlow.value.copy(user = user)
-    }
-
-    fun logUserOut() {
-        Firebase.auth.signOut()
-//        _authStateFlow.update { authState.copy(user = Firebase.auth.currentUser) }
-        state[stateKeyName] = authStateFlow.value.copy(user = Firebase.auth.currentUser)
-    }
-
-    fun onPhoneNumberException(exception: FirebaseAuthInvalidCredentialsException) {
-//        _authStateFlow.update { it.copy(phoneNumberException = exception) }
+    override fun notifyPhoneNumberException(exception: FirebaseException) {
         state[stateKeyName] = authStateFlow.value.copy(
             phoneNumberException = exception
         )
     }
 
-    fun onVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException) {
-//        _authStateFlow.update { it.copy(verificationCodeException = exception) }
-        state[stateKeyName] = authStateFlow.value.copy(
-            verificationCodeException = exception
-        )
-    }
-
-    fun clearVerificationCodeException() {
-//        _authStateFlow.update { it.copy(verificationCodeException = null) }
-        state[stateKeyName] = authStateFlow.value.copy(
-            verificationCodeException = null
-        )
-    }
-
-    fun onVerificationProgressNotification(progress: Boolean) {
-//        _authStateFlow.update { it.copy(waitingForVerificationCode = progress) }
+    override fun notifyVerificationProgress(progress: Boolean) {
         state[stateKeyName] = authStateFlow.value.copy(
             waitingForVerificationCode = progress
         )
+    }
+
+    override fun notifyLoggingProgress(progress: Boolean) {
+        TODO("Not yet implemented")
     }
 }
