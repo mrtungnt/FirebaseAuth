@@ -1,6 +1,10 @@
 package com.example.firebaseauth.auth
 
+import android.app.Activity
 import android.os.Bundle
+import android.view.View
+import android.view.Window
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -16,6 +20,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -23,6 +29,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.R
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
@@ -32,6 +40,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -85,8 +94,15 @@ class AuthActivity : ComponentActivity() {
                             callbacks,
                         )
                     }
-
-                    AuthHomeScreen(authViewModel, phoneAuth)
+                    AuthHomeScreen(
+                        this@AuthActivity.applicationContext.getSystemService(
+                            INPUT_METHOD_SERVICE
+                        ) as InputMethodManager,
+                        LocalView.current,
+                        authViewModel,
+                        phoneAuth,
+                        this@AuthActivity.window
+                    )
                 }
             }
         }
@@ -94,7 +110,13 @@ class AuthActivity : ComponentActivity() {
 }
 
 @Composable
-fun AuthHomeScreen(authViewModel: AuthViewModel, phoneAuth: PhoneAuth) {
+fun AuthHomeScreen(
+    inputMethodManager: InputMethodManager,
+    view: View,
+    authViewModel: AuthViewModel,
+    phoneAuth: PhoneAuth,
+    window: Window
+) {
     val authStateFromFlow by authViewModel.authStateFlow.collectAsState()
     var codeToVerify by rememberSaveable {
         mutableStateOf("")
@@ -115,6 +137,12 @@ fun AuthHomeScreen(authViewModel: AuthViewModel, phoneAuth: PhoneAuth) {
         }
     } else {
         if (authStateFromFlow.verificationId.compareTo("") == 0) {
+            val inputManager =
+                LocalContext.current.getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+            val view = LocalView.current
+            val insetsController =
+                WindowCompat.getInsetsController(window, view)
+
             LoginWithPhoneNumberScreen(
                 phoneNumber,
                 { phoneNumber = it },
@@ -123,6 +151,8 @@ fun AuthHomeScreen(authViewModel: AuthViewModel, phoneAuth: PhoneAuth) {
                         phoneNumber,
                         authStateFromFlow.resendingToken
                     )
+//                    inputManager.hideSoftInputFromWindow(view.windowToken, 0)
+                    insetsController.hide(WindowInsetsCompat.Type.ime())
                 },
                 authStateFromFlow.waitingForVerificationCode,
                 authStateFromFlow.phoneNumberException,
@@ -131,7 +161,10 @@ fun AuthHomeScreen(authViewModel: AuthViewModel, phoneAuth: PhoneAuth) {
             VerifyCodeScreen(
                 codeToVerify,
                 { codeToVerify = it },
-                { phoneAuth.onReceiveCodeToVerify(authStateFromFlow.verificationId, codeToVerify) },
+                {
+                    phoneAuth.onReceiveCodeToVerify(authStateFromFlow.verificationId, codeToVerify)
+                    inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
+                },
                 authStateFromFlow.verificationCodeException,
                 authViewModel::clearVerificationCodeException
             )
@@ -141,6 +174,7 @@ fun AuthHomeScreen(authViewModel: AuthViewModel, phoneAuth: PhoneAuth) {
 
 @Composable
 fun LoginWithPhoneNumberScreen(
+
     phoneNumber: String,
     onValueChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -180,10 +214,17 @@ fun LoginWithPhoneNumberScreen(
                 }
             } else
                 if (waitingForVerificationCode) {
+                    var message by rememberSaveable() {
+                        mutableStateOf("Chờ mã xác minh")
+                    }
+                    LaunchedEffect(key1 = phoneNumber) {
+                        delay(10000)
+                        message = "Thời gian đợi hơi lâu."
+                    }
                     Column {
                         CircularProgressIndicator()
                         Divider(Modifier.height(3.dp))
-                        Text(text = "Chờ mã xác minh")
+                        Text(text = message)
                     }
                 }
         }

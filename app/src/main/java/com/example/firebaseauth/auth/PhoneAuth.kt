@@ -1,15 +1,11 @@
 package com.example.firebaseauth.auth
 
-import android.os.Parcelable
 import android.util.Log
 import androidx.activity.ComponentActivity
 import com.google.firebase.FirebaseException
-import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
 import java.util.concurrent.TimeUnit
 
 interface PhoneAuthNotification {
@@ -73,13 +69,8 @@ class PhoneAuth(
 
         override fun onVerificationFailed(e: FirebaseException) {
             Log.w(TAG, "onVerificationFailed", e)
-
-            when (e) {
-                is FirebaseTooManyRequestsException -> {} // The SMS quota for the project has been exceeded
-                else -> {
-                    callbacksToHost.notifyPhoneNumberException(e)
-                }
-            }
+//                if (e) is FirebaseTooManyRequestsException -> {} // The SMS quota for the project has been exceeded
+            callbacksToHost.notifyPhoneNumberException(e)
         }
 
         override fun onCodeSent(
