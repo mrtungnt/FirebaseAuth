@@ -1,9 +1,6 @@
 package com.example.firebaseauth.auth
 
 import android.os.Bundle
-import android.util.Log
-import android.view.View
-import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -17,9 +14,10 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -94,10 +92,6 @@ class AuthActivity : ComponentActivity() {
                         )
                     }
                     AuthHomeScreen(
-                        this@AuthActivity.applicationContext.getSystemService(
-                            INPUT_METHOD_SERVICE
-                        ) as InputMethodManager,
-                        LocalView.current,
                         authViewModel,
                         phoneAuth,
                     )
@@ -107,10 +101,9 @@ class AuthActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AuthHomeScreen(
-    inputMethodManager: InputMethodManager,
-    view: View,
     authViewModel: AuthViewModel,
     phoneAuth: PhoneAuth,
 ) {
@@ -121,8 +114,10 @@ fun AuthHomeScreen(
     }
 
     var phoneNumber by rememberSaveable {
-        mutableStateOf("+84")
+        mutableStateOf("")
     }
+
+    val kbController = LocalSoftwareKeyboardController.current
 
     fun hasUserLoggedIn() = authStateFromFlow.userSignedIn
     if (hasUserLoggedIn()) {
@@ -148,7 +143,7 @@ fun AuthHomeScreen(
                     phoneNumber,
                     authStateFromFlow.resendingToken
                 )
-//                inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
+//                kbController?.hide()
             },
             authStateFromFlow.requestInProgress,
             authStateFromFlow.requestExceptionMessage,
@@ -177,6 +172,7 @@ fun AuthHomeScreen(
     )
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LoginWithPhoneNumberScreen(
     phoneNumber: String,
@@ -190,23 +186,91 @@ fun LoginWithPhoneNumberScreen(
         modifier = Modifier
             .fillMaxWidth()
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        val countryCodeMap = remember {
+            listOf("Vietnam" to "+84", "United States" to "+1")
+        }
+        var expanded by rememberSaveable {
+            mutableStateOf(false)
+        }
+        var selectedItem by rememberSaveable {
+            mutableStateOf(countryCodeMap[0])
+        }
+        var selectedCountryName by rememberSaveable {
+            mutableStateOf("")
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(IntrinsicSize.Max)
+        ) {
             Image(painter = painterResource(id = R.drawable.ic_group_2), null)
-            OutlinedTextField(
-                value = phoneNumber,
-                onValueChange = onPhoneNumberChange,
-                singleLine = true,
-                label = {
-                    Text(
-                        text = "Nhập số điện thoại"
-                    )
-                },
-                keyboardActions = KeyboardActions(onDone = onDone),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Done
+
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }) {
+                TextField(
+                    value = selectedCountryName,
+                    onValueChange = { selectedCountryName = it },
+                    label = { Text(text = "Quốc gia") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(
+                            expanded = expanded
+                        )
+                    }, colors = ExposedDropdownMenuDefaults.textFieldColors()
                 )
-            )
+                val filter = countryCodeMap.filter {
+                    it.first.contains(
+                        selectedCountryName,
+                        ignoreCase = true
+                    )
+                }
+                if (filter.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }) {
+                        filter.forEach {
+                            DropdownMenuItem(onClick = { selectedItem = it; expanded = false }) {
+                                Text(text = it.first)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Column {
+                Row {
+                    Spacer(modifier = Modifier.weight(.15f, fill = true))
+                    OutlinedTextField(
+                        value = selectedItem.second,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(text = "Mã QG") },
+                        modifier = Modifier
+                            .weight(.25f/*, fill = false*/)
+                            .width(IntrinsicSize.Max)
+                    )
+                    OutlinedTextField(
+                        value = phoneNumber,
+                        onValueChange = onPhoneNumberChange,
+                        singleLine = true,
+                        label = {
+                            Text(
+                                text = "Nhập số điện thoại"
+                            )
+                        },
+                        keyboardActions = KeyboardActions(onDone = onDone),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Phone,
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier
+                            .weight(.45f/*, fill = false*/)
+                            .width(IntrinsicSize.Max)
+                    )
+                    Spacer(modifier = Modifier.weight(.15f, fill = true))
+                }
+            }
+
             if (hasException(exceptionMessage)) {
                 Box(
                     Modifier
