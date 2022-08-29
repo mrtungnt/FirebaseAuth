@@ -71,6 +71,7 @@ class PhoneAuth(
             Log.w(TAG, "onVerificationFailed", e)
 //                if (e) is FirebaseTooManyRequestsException -> {} // The SMS quota for the project has been exceeded
             callbacksToHost.onRequestException(e.message!!)
+            callbacksToHost.onRequestInProgress(false)
         }
 
         override fun onCodeSent(
@@ -105,7 +106,6 @@ class PhoneAuth(
             .build()
 
         PhoneAuthProvider.verifyPhoneNumber(options)
-        callbacksToHost.onRequestInProgress(false)
         callbacksToHost.onRequestInProgress(true)
     }
 
@@ -118,11 +118,10 @@ class PhoneAuth(
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
         auth.signInWithCredential(credential)
             .addOnCompleteListener(activity) { task ->
+                callbacksToHost.onVerificationInProgress(false)
                 if (task.isSuccessful) {
                     // Sign in success, update UI with the signed-in user's information
                     Log.d(TAG, "signInWithCredential:success")
-
-                    callbacksToHost.onVerificationInProgress(false)
                     callbacksToHost.onSuccessfulLogin()
                 } else {
                     // Sign in failed, display a message and update the UI

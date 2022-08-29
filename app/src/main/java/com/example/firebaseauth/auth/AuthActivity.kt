@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.R
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -147,7 +148,7 @@ fun AuthHomeScreen(
                     phoneNumber,
                     authStateFromFlow.resendingToken
                 )
-                inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
+//                inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
             },
             authStateFromFlow.requestInProgress,
             authStateFromFlow.requestExceptionMessage,

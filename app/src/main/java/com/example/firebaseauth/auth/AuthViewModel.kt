@@ -25,14 +25,14 @@ class AuthViewModel @Inject constructor(
 
     fun clearVerificationExceptionMessage() {
         state[stateKeyName] = authStateFlow.value.copy(
-            verificationExceptionMessage = null, verificationInProgress = false
+            verificationExceptionMessage = null,
         )
     }
 
     fun clearRequestExceptionMessage() {
         state[stateKeyName] =
             authStateFlow.value.copy(
-                requestExceptionMessage = null, requestInProgress = false
+                requestExceptionMessage = null,
             )
     }
 
