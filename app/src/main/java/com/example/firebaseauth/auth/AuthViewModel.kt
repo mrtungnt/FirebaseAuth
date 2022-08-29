@@ -2,16 +2,10 @@ package com.example.firebaseauth.auth
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.google.firebase.FirebaseException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,26 +20,36 @@ class AuthViewModel @Inject constructor(
     fun logUserOut() {
         Firebase.auth.signOut()
         state[stateKeyName] =
-            authState.copy(user = Firebase.auth.currentUser)
+            authState.copy(userSignedIn = Firebase.auth.currentUser != null)
     }
 
-    fun clearVerificationCodeException() {
+    fun clearVerificationExceptionMessage() {
         state[stateKeyName] = authStateFlow.value.copy(
-            verificationCodeException = null
+            verificationExceptionMessage = null, verificationInProgress = false
         )
     }
 
-    override fun notifySuccessfulLogin(user: FirebaseUser?) {
-        state[stateKeyName] = authStateFlow.value.copy(user = user)
+    fun clearRequestExceptionMessage() {
+        state[stateKeyName] =
+            authStateFlow.value.copy(
+                requestExceptionMessage = null, requestInProgress = false
+            )
     }
 
-    override fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException) {
+    override fun onSuccessfulLogin() {
+        state[stateKeyName] =
+            authStateFlow.value.copy(
+                userSignedIn = Firebase.auth.currentUser != null
+            )
+    }
+
+    override fun onVerificationException(exceptionMessage: String) {
         state[stateKeyName] = authStateFlow.value.copy(
-            verificationCodeException = exception
+            verificationExceptionMessage = exceptionMessage
         )
     }
 
-    override fun notifyCodeSent(
+    override fun onCodeSent(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
     ) {
@@ -55,19 +59,21 @@ class AuthViewModel @Inject constructor(
         )
     }
 
-    override fun notifyPhoneNumberException(exception: FirebaseException) {
+    override fun onRequestException(exceptionMessage: String) {
         state[stateKeyName] = authStateFlow.value.copy(
-            phoneNumberException = exception
+            requestExceptionMessage = exceptionMessage
         )
     }
 
-    override fun notifyVerificationProgress(progress: Boolean) {
+    override fun onVerificationInProgress(inProgress: Boolean) {
         state[stateKeyName] = authStateFlow.value.copy(
-            waitingForVerificationCode = progress
+            verificationInProgress = inProgress
         )
     }
 
-    override fun notifyLoggingProgress(progress: Boolean) {
-        TODO("Not yet implemented")
+    override fun onRequestInProgress(inProgress: Boolean) {
+        state[stateKeyName] = authStateFlow.value.copy(
+            requestInProgress = inProgress
+        )
     }
 }

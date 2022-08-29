@@ -1,9 +1,8 @@
 package com.example.firebaseauth.auth
 
-import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
-import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,7 +19,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -29,16 +27,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.R
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
-import com.google.firebase.FirebaseException
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 
@@ -59,30 +53,34 @@ class AuthActivity : ComponentActivity() {
                     val authViewModel = viewModel<AuthViewModel>()
                     val callbacks = remember {
                         object : CallbacksFromPhoneAuthToHost() {
-                            override fun notifyCodeSent(
+                            override fun onCodeSent(
                                 verificationId: String,
                                 resendingToken: PhoneAuthProvider.ForceResendingToken
                             ) {
-                                authViewModel.notifyCodeSent(verificationId, resendingToken)
+                                authViewModel.onCodeSent(verificationId, resendingToken)
                             }
 
-                            override fun notifySuccessfulLogin(user: FirebaseUser?) {
-                                authViewModel.notifySuccessfulLogin(user)
+                            override fun onSuccessfulLogin() {
+                                authViewModel.onSuccessfulLogin()
                             }
 
-                            override fun notifyPhoneNumberException(exception: FirebaseException) {
-                                authViewModel.notifyPhoneNumberException(exception)
+                            override fun onRequestException(exceptionMessage: String) {
+                                authViewModel.onRequestException(exceptionMessage)
                             }
 
-                            override fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException) {
-                                authViewModel.notifyVerificationCodeException(exception)
+                            override fun onVerificationException(exceptionMessage: String) {
+                                authViewModel.onVerificationException(exceptionMessage)
                             }
 
-                            override fun notifyVerificationProgress(progress: Boolean) {
-                                authViewModel.notifyVerificationProgress(progress)
+                            override fun onVerificationInProgress(inProgress: Boolean) {
+                                authViewModel.onVerificationInProgress(inProgress)
                             }
 
-                            /* override fun notifyLoggingProgress(progress: Boolean) {
+                            override fun onRequestInProgress(inProgress: Boolean) {
+                                authViewModel.onRequestInProgress(inProgress)
+                            }
+
+                            /* override fun onLoggingProgress(progress: Boolean) {
                                  TODO("Not yet implemented")
                              }*/
                         }
@@ -101,7 +99,6 @@ class AuthActivity : ComponentActivity() {
                         LocalView.current,
                         authViewModel,
                         phoneAuth,
-                        this@AuthActivity.window
                     )
                 }
             }
@@ -115,9 +112,9 @@ fun AuthHomeScreen(
     view: View,
     authViewModel: AuthViewModel,
     phoneAuth: PhoneAuth,
-    window: Window
 ) {
     val authStateFromFlow by authViewModel.authStateFlow.collectAsState()
+
     var codeToVerify by rememberSaveable {
         mutableStateOf("")
     }
@@ -126,60 +123,66 @@ fun AuthHomeScreen(
         mutableStateOf("+84")
     }
 
-    fun hasUserLoggedIn() = authStateFromFlow.user != null
+    fun hasUserLoggedIn() = authStateFromFlow.userSignedIn
     if (hasUserLoggedIn()) {
         codeToVerify = ""
         Column() {
-            Text(text = "Welcome ${authStateFromFlow.user}")
+            val user = Firebase.auth.currentUser
+            Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
             Button(onClick = authViewModel::logUserOut) {
                 Text(text = "Sign out")
             }
         }
-    } else {
-        if (authStateFromFlow.verificationId.compareTo("") == 0) {
-            val inputManager =
-                LocalContext.current.getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
-            val view = LocalView.current
-            val insetsController =
-                WindowCompat.getInsetsController(window, view)
+    } else if (authStateFromFlow.verificationId.compareTo("") == 0) {
+        LoginWithPhoneNumberScreen(
+            phoneNumber,
+            {
+                if (hasException(authStateFromFlow.requestExceptionMessage))
+                    authViewModel.clearRequestExceptionMessage()
 
-            LoginWithPhoneNumberScreen(
-                phoneNumber,
-                { phoneNumber = it },
-                {
-                    phoneAuth.startPhoneNumberVerification(
-                        phoneNumber,
-                        authStateFromFlow.resendingToken
-                    )
-//                    inputManager.hideSoftInputFromWindow(view.windowToken, 0)
-                    insetsController.hide(WindowInsetsCompat.Type.ime())
-                },
-                authStateFromFlow.waitingForVerificationCode,
-                authStateFromFlow.phoneNumberException,
-            )
-        } else {
-            VerifyCodeScreen(
-                codeToVerify,
-                { codeToVerify = it },
-                {
-                    phoneAuth.onReceiveCodeToVerify(authStateFromFlow.verificationId, codeToVerify)
-                    inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
-                },
-                authStateFromFlow.verificationCodeException,
-                authViewModel::clearVerificationCodeException
-            )
-        }
-    }
+                phoneNumber = it
+            },
+            {
+                phoneAuth.startPhoneNumberVerification(
+                    phoneNumber,
+                    authStateFromFlow.resendingToken
+                )
+                inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
+            },
+            authStateFromFlow.requestInProgress,
+            authStateFromFlow.requestExceptionMessage,
+        )
+    } else VerifyCodeScreen(
+        codeToVerify,
+        {
+            if (it.length <= VERIFICATION_CODE_LENGTH) {
+                if (hasException(authStateFromFlow.verificationExceptionMessage))
+                    authViewModel.clearVerificationExceptionMessage()
+
+                if (it.last().code != 10) // Not key Enter
+                    codeToVerify = it
+            }
+
+            if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
+                phoneAuth.onReceiveCodeToVerify(
+                    authStateFromFlow.verificationId,
+                    codeToVerify
+                )
+//                        inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
+            }
+        },
+        authStateFromFlow.verificationExceptionMessage,
+        authStateFromFlow.verificationInProgress,
+    )
 }
 
 @Composable
 fun LoginWithPhoneNumberScreen(
-
     phoneNumber: String,
-    onValueChange: (String) -> Unit,
+    onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
-    waitingForVerificationCode: Boolean,
-    exceptionOrNull: FirebaseException?,
+    requestInProgress: Boolean,
+    exceptionMessage: String?,
 ) {
     Surface(
         color = MaterialTheme.colors.background,
@@ -190,7 +193,7 @@ fun LoginWithPhoneNumberScreen(
             Image(painter = painterResource(id = R.drawable.ic_group_2), null)
             OutlinedTextField(
                 value = phoneNumber,
-                onValueChange = onValueChange,
+                onValueChange = onPhoneNumberChange,
                 singleLine = true,
                 label = {
                     Text(
@@ -203,46 +206,49 @@ fun LoginWithPhoneNumberScreen(
                     imeAction = ImeAction.Done
                 )
             )
-            if (hasException(exceptionOrNull)) {
+            if (hasException(exceptionMessage)) {
                 Box(
                     Modifier
                         .padding(10.dp)
                         .border(BorderStroke(3.dp, Color.Blue))
                         .wrapContentSize()
                 ) {
-                    Text(text = exceptionOrNull?.message!!, Modifier.padding(10.dp))
+                    Text(text = exceptionMessage!!, Modifier.padding(10.dp))
                 }
-            } else
-                if (waitingForVerificationCode) {
-                    var message by rememberSaveable() {
-                        mutableStateOf("Chờ mã xác minh")
-                    }
-                    LaunchedEffect(key1 = phoneNumber) {
-                        delay(10000)
-                        message = "Thời gian đợi hơi lâu."
-                    }
-                    Column {
-                        CircularProgressIndicator()
-                        Divider(Modifier.height(3.dp))
-                        Text(text = message)
-                    }
+            } else if (requestInProgress) {
+                var message by rememberSaveable() {
+                    mutableStateOf("Chờ mã xác minh")
                 }
+                LaunchedEffect(key1 = phoneNumber) {
+                    delay(10000)
+                    message = "Thời gian đợi hơi lâu."
+                }
+                Column(
+                    Modifier
+                        .padding(5.dp)
+                        .width(IntrinsicSize.Max)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+//                    Divider(Modifier.height(3.dp))
+                    Text(text = message, textAlign = TextAlign.Center)
+                }
+            }
         }
     }
 }
 
-fun hasException(e: FirebaseException?) = e != null
+fun hasException(message: String?) = message != null
 
 
 const val VERIFICATION_CODE_LENGTH = 6
+const val PHONE_NUMBER_LENGTH = 12
 
 @Composable
 fun VerifyCodeScreen(
     codeToVerify: String,
-    onValueChange: (String) -> Unit,
-    onDone: () -> Unit,
-    exceptionOrNull: FirebaseAuthException? = null,
-    clearException: () -> Unit,
+    onCodeChange: (String) -> Unit,
+    exceptionMessage: String? = null,
+    verificationInProgress: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -256,15 +262,7 @@ fun VerifyCodeScreen(
         )
         TextField(
             value = codeToVerify,
-            onValueChange = {
-                if (it.length <= VERIFICATION_CODE_LENGTH) {
-                    if (hasException(exceptionOrNull)) clearException()
-                    onValueChange(it)
-                }
-                if (it.length == VERIFICATION_CODE_LENGTH) {
-                    onDone()
-                }
-            },
+            onValueChange = onCodeChange,
 //            modifier = Modifier.widthIn(max = 90.dp),
             textStyle = TextStyle(textAlign = TextAlign.Center),
             singleLine = true,
@@ -298,19 +296,29 @@ fun VerifyCodeScreen(
                 Text(text = "Xác thực bằng số điện thoại khác")
             }
         }*/
-        if (hasException(exceptionOrNull)) {
+        if (hasException(exceptionMessage)) {
             Box(
                 Modifier
                     .padding(10.dp)
                     .border(BorderStroke(3.dp, Color.Blue))
                     .wrapContentSize()
             ) {
-                Text(text = exceptionOrNull?.message!!, Modifier.padding(10.dp))
+                Text(text = exceptionMessage!!, Modifier.padding(10.dp))
+            }
+        } else if (verificationInProgress) {
+            Column(
+                Modifier
+                    .padding(5.dp)
+                    .width(IntrinsicSize.Max)
+            ) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+//                    Divider(Modifier.height(3.dp))
+                Text(text = "Đang xác thực", textAlign = TextAlign.Center)
             }
         }
     }
-
 }
+
 
 @Preview(showBackground = true)
 @Composable
@@ -324,6 +332,6 @@ fun LoginWithPasswordScreenPreview() {
 @Composable
 fun VerifyCodeScreenPreview() {
     FirebaseAuthTheme {
-        VerifyCodeScreen("", {}, {}, null, {})
+        VerifyCodeScreen("", {}, null, false)
     }
 }

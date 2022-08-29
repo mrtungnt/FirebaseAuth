@@ -9,38 +9,38 @@ import com.google.firebase.ktx.Firebase
 import java.util.concurrent.TimeUnit
 
 interface PhoneAuthNotification {
-    fun notifySuccessfulLogin(user: FirebaseUser?)
+    fun onSuccessfulLogin()
 
-    fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
+    fun onVerificationException(exceptionMessage: String)
 
-    fun notifyCodeSent(
+    fun onCodeSent(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
     )
 
-    fun notifyPhoneNumberException(exception: FirebaseException)
+    fun onRequestException(exceptionMessage: String)
 
-    fun notifyVerificationProgress(progress: Boolean)
+    fun onVerificationInProgress(inProgress: Boolean)
 
-    fun notifyLoggingProgress(progress: Boolean)
+    fun onRequestInProgress(inProgress: Boolean)
 }
 
 abstract class CallbacksFromPhoneAuthToHost : PhoneAuthNotification {
-    abstract override fun notifySuccessfulLogin(user: FirebaseUser?)
+    abstract override fun onSuccessfulLogin()
 
-    abstract override fun notifyVerificationCodeException(exception: FirebaseAuthInvalidCredentialsException)
+    abstract override fun onVerificationException(exceptionMessage: String)
 
-    override fun notifyCodeSent(
+    override fun onCodeSent(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
     ) {
     }
 
-    override fun notifyPhoneNumberException(exception: FirebaseException) {}
+    override fun onRequestException(exceptionMessage: String) {}
 
-    override fun notifyVerificationProgress(progress: Boolean) {}
+    override fun onVerificationInProgress(inProgress: Boolean) {}
 
-    override fun notifyLoggingProgress(progress: Boolean) {}
+    override fun onRequestInProgress(inProgress: Boolean) {}
 }
 
 class PhoneAuth(
@@ -70,7 +70,7 @@ class PhoneAuth(
         override fun onVerificationFailed(e: FirebaseException) {
             Log.w(TAG, "onVerificationFailed", e)
 //                if (e) is FirebaseTooManyRequestsException -> {} // The SMS quota for the project has been exceeded
-            callbacksToHost.notifyPhoneNumberException(e)
+            callbacksToHost.onRequestException(e.message!!)
         }
 
         override fun onCodeSent(
@@ -84,7 +84,7 @@ class PhoneAuth(
 
             // Save resending token so we can use it later
             resendToken = token
-            callbacksToHost.notifyCodeSent(verificationId, token)
+            callbacksToHost.onCodeSent(verificationId, token)
         }
 
         override fun onCodeAutoRetrievalTimeOut(verificationId: String) {
@@ -105,13 +105,14 @@ class PhoneAuth(
             .build()
 
         PhoneAuthProvider.verifyPhoneNumber(options)
-        callbacksToHost.notifyVerificationProgress(true)
+        callbacksToHost.onRequestInProgress(false)
+        callbacksToHost.onRequestInProgress(true)
     }
 
     fun onReceiveCodeToVerify(verificationId: String, code: String) {
         val credential = PhoneAuthProvider.getCredential(verificationId, code)
         signInWithPhoneAuthCredential(credential)
-        callbacksToHost.notifyVerificationProgress(false)
+        callbacksToHost.onVerificationInProgress(true)
     }
 
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
@@ -121,13 +122,13 @@ class PhoneAuth(
                     // Sign in success, update UI with the signed-in user's information
                     Log.d(TAG, "signInWithCredential:success")
 
-                    val user = task.result?.user
-                    callbacksToHost.notifySuccessfulLogin(user)
+                    callbacksToHost.onVerificationInProgress(false)
+                    callbacksToHost.onSuccessfulLogin()
                 } else {
                     // Sign in failed, display a message and update the UI
                     Log.w(TAG, "signInWithCredential:failure", task.exception)
                     if (task.exception is FirebaseAuthInvalidCredentialsException) {
-                        callbacksToHost.notifyVerificationCodeException(task.exception as FirebaseAuthInvalidCredentialsException)
+                        callbacksToHost.onVerificationException((task.exception as FirebaseAuthInvalidCredentialsException).message!!)
                         // The verification code entered was invalid
                     }
                     // Update UI

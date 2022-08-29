@@ -18,7 +18,7 @@ object Modules {
     @Provides
     fun providesAuthUIState(): AuthUIState = AuthUIState(
         "", PhoneAuthProvider.ForceResendingToken.zza(),
-        Firebase.auth.currentUser,
+        Firebase.auth.currentUser != null,
         null,
         null,
         false,
