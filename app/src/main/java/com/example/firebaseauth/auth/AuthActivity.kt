@@ -106,7 +106,7 @@ fun AuthHomeScreen(
     authViewModel: AuthViewModel,
     phoneAuth: PhoneAuth,
 ) {
-    val authStateFromFlow by authViewModel.authStateFlow.collectAsState()
+    val authState by authViewModel.authStateFlow.collectAsState()
 
     var codeToVerify by rememberSaveable {
         mutableStateOf("")
@@ -118,7 +118,7 @@ fun AuthHomeScreen(
 
     val kbController = LocalSoftwareKeyboardController.current
 
-    fun hasUserLoggedIn() = authStateFromFlow.userSignedIn
+    fun hasUserLoggedIn() = authState.userSignedIn
     if (hasUserLoggedIn()) {
         codeToVerify = ""
         Column() {
@@ -128,11 +128,12 @@ fun AuthHomeScreen(
                 Text(text = "Sign out")
             }
         }
-    } else if (authStateFromFlow.verificationId.compareTo("") == 0) {
+    } else if (authState.verificationId.compareTo("") == 0) {
         LoginWithPhoneNumberScreen(
+            authViewModel,
             phoneNumber,
             {
-                if (hasException(authStateFromFlow.requestExceptionMessage))
+                if (hasException(authState.requestExceptionMessage))
                     authViewModel.clearRequestExceptionMessage()
 
                 phoneNumber = it
@@ -140,18 +141,18 @@ fun AuthHomeScreen(
             {
                 phoneAuth.startPhoneNumberVerification(
                     phoneNumber,
-                    authStateFromFlow.resendingToken
+                    authState.resendingToken
                 )
 //                kbController?.hide()
             },
-            authStateFromFlow.requestInProgress,
-            authStateFromFlow.requestExceptionMessage,
+            authState.requestInProgress,
+            authState.requestExceptionMessage,
         )
     } else VerifyCodeScreen(
         codeToVerify,
         {
             if (it.length <= VERIFICATION_CODE_LENGTH) {
-                if (hasException(authStateFromFlow.verificationExceptionMessage))
+                if (hasException(authState.verificationExceptionMessage))
                     authViewModel.clearVerificationExceptionMessage()
 
                 if (it.last().code != 10) // Not key Enter
@@ -160,20 +161,20 @@ fun AuthHomeScreen(
 
             if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
                 phoneAuth.onReceiveCodeToVerify(
-                    authStateFromFlow.verificationId,
+                    authState.verificationId,
                     codeToVerify
                 )
-//                        inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
             }
         },
-        authStateFromFlow.verificationExceptionMessage,
-        authStateFromFlow.verificationInProgress,
+        authState.verificationExceptionMessage,
+        authState.verificationInProgress,
     )
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LoginWithPhoneNumberScreen(
+    authViewModel: AuthViewModel,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -185,23 +186,21 @@ fun LoginWithPhoneNumberScreen(
         modifier = Modifier
             .fillMaxWidth()
     ) {
-        val countryCodeMap = remember {
-            listOf("Vietnam" to "+84", "United States" to "+1")
+        val countryCodeMap = remember{
+//            listOf("Vietnam" to "+84", "United States" to "+1")
+            authViewModel.countriesAndDialCodes
         }
         var expanded by rememberSaveable {
             mutableStateOf(false)
         }
-        var selectedCountry by rememberSaveable {
-            mutableStateOf(countryCodeMap[0])
+        var selectedCountry = rememberSaveable{
+            mutableStateOf("" to "")
         }
         var selectedCountryName by rememberSaveable {
             mutableStateOf("")
         }
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(IntrinsicSize.Max)
-        ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Image(painter = painterResource(id = R.drawable.ic_group_2), null)
 
             ExposedDropdownMenuBox(
@@ -240,38 +239,34 @@ fun LoginWithPhoneNumberScreen(
                 }
             }
 
-            Column {
-                Row {
-                    Spacer(modifier = Modifier.weight(.15f, fill = true))
-                    OutlinedTextField(
-                        value = selectedCountry.second,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(text = "Mã QG") },
-                        modifier = Modifier
-                            .weight(.25f/*, fill = false*/)
-                            .width(IntrinsicSize.Max)
-                    )
-                    OutlinedTextField(
-                        value = phoneNumber,
-                        onValueChange = onPhoneNumberChange,
-                        singleLine = true,
-                        label = {
-                            Text(
-                                text = "Nhập số điện thoại"
-                            )
-                        },
-                        keyboardActions = KeyboardActions(onDone = onDone),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Phone,
-                            imeAction = ImeAction.Done
-                        ),
-                        modifier = Modifier
-                            .weight(.45f/*, fill = false*/)
-                            .width(IntrinsicSize.Max)
-                    )
-                    Spacer(modifier = Modifier.weight(.15f, fill = true))
-                }
+            Row {
+                Spacer(modifier = Modifier.weight(.14f))
+                OutlinedTextField(
+                    value = selectedCountry.second,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(text = "Mã QG") },
+                    modifier = Modifier
+                        .weight(.25f)
+                )
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = onPhoneNumberChange,
+                    singleLine = true,
+                    label = {
+                        Text(
+                            text = "Nhập số điện thoại"
+                        )
+                    },
+                    keyboardActions = KeyboardActions(onDone = onDone),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    ),
+                    modifier = Modifier
+                        .weight(.45f)
+                )
+                Spacer(modifier = Modifier.weight(.14f))
             }
 
             if (hasException(exceptionMessage)) {
