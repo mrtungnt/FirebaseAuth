@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.R
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -192,7 +191,7 @@ fun LoginWithPhoneNumberScreen(
         var expanded by rememberSaveable {
             mutableStateOf(false)
         }
-        var selectedItem by rememberSaveable {
+        var selectedCountry by rememberSaveable {
             mutableStateOf(countryCodeMap[0])
         }
         var selectedCountryName by rememberSaveable {
@@ -229,7 +228,11 @@ fun LoginWithPhoneNumberScreen(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }) {
                         filter.forEach {
-                            DropdownMenuItem(onClick = { selectedItem = it; expanded = false }) {
+                            DropdownMenuItem(onClick = {
+                                selectedCountry = it
+                                selectedCountryName = it.first
+                                expanded = false
+                            }) {
                                 Text(text = it.first)
                             }
                         }
@@ -241,7 +244,7 @@ fun LoginWithPhoneNumberScreen(
                 Row {
                     Spacer(modifier = Modifier.weight(.15f, fill = true))
                     OutlinedTextField(
-                        value = selectedItem.second,
+                        value = selectedCountry.second,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(text = "Mã QG") },
