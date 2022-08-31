@@ -27,7 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.R
-import com.example.firebaseauth.data.CountryAndDialCodeModel
+import com.example.firebaseauth.data.network.CountryAndDialCodeModel
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth

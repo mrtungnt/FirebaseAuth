@@ -1,4 +1,4 @@
-package com.example.firebaseauth.data
+package com.example.firebaseauth.data.network
 
 import io.ktor.client.*
 import io.ktor.client.engine.android.*

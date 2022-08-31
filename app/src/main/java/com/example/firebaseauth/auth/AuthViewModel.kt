@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.firebaseauth.data.CountryAndDialCodeModel
+import com.example.firebaseauth.data.network.CountryAndDialCodeModel
 import com.example.firebaseauth.data.CountryAndDialCodeRepository
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth

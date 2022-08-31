@@ -1,4 +1,4 @@
-package com.example.firebaseauth.data
+package com.example.firebaseauth.data.network
 
 import kotlinx.serialization.Serializable
 
