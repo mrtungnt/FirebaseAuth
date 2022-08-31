@@ -1,10 +1,13 @@
 package com.example.firebaseauth.auth
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.firebaseauth.data.CountryModel
-import com.example.firebaseauth.data.CountryRepository
+import com.example.firebaseauth.data.CountryAndDialCodeModel
+import com.example.firebaseauth.data.CountryAndDialCodeRepository
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -14,7 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val countryRepository: CountryRepository,
+    private val countryAndDialCodeRepository: CountryAndDialCodeRepository,
     private val authState: AuthUIState,
     private val state: SavedStateHandle
 ) :
@@ -22,14 +25,22 @@ class AuthViewModel @Inject constructor(
     private val stateKeyName = "savedUIState"
     val authStateFlow = state.getStateFlow(stateKeyName, authState)
 
-    val countriesAndDialCodes: Map<String, String> = mapOf()
+    private lateinit var _countriesAndDialCodes: List<CountryAndDialCodeModel>
+    val countriesAndDialCodes
+        get() = _countriesAndDialCodes
+    private var _countriesAndDialCodesReady by mutableStateOf(false)
+    val countriesAndDialCodesReady get() = _countriesAndDialCodesReady
+
+    private var _connectionExceptionMessage: String? by mutableStateOf(null)
+    val connectionExceptionMessage get() = _connectionExceptionMessage
 
     init {
         viewModelScope.launch {
-            val r = countryRepository.getCountriesAndDialCodes()
+            val r = countryAndDialCodeRepository.getCountriesAndDialCodes()
             if (r.isSuccess) {
-                r.getOrNull()?.data?.forEach { countriesAndDialCodes[it.name] to it.dial_code }
-            }
+                _countriesAndDialCodes = r.getOrNull()?.data!!
+                _countriesAndDialCodesReady = true
+            } else r.onFailure { _connectionExceptionMessage = it.message }
         }
     }
 

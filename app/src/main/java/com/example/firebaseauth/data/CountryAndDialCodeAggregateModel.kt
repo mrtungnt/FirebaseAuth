@@ -3,8 +3,8 @@ package com.example.firebaseauth.data
 import kotlinx.serialization.Serializable
 
 @Serializable()
-data class CountryListModel(
+data class CountryAndDialCodeAggregateModel(
     private val error: Boolean,
     private val msg: String,
-     val data: List<CountryModel>
+     val data: List<CountryAndDialCodeModel>
 )

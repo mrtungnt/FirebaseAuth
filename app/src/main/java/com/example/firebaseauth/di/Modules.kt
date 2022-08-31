@@ -21,7 +21,7 @@ object Modules {
         Firebase.auth.currentUser != null,
         null,
         null,
-        false,
-        false,
+        requestInProgress = false,
+        verificationInProgress = false,
     )
 }

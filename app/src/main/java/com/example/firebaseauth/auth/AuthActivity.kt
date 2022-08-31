@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.R
+import com.example.firebaseauth.data.CountryAndDialCodeModel
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
@@ -128,53 +129,58 @@ fun AuthHomeScreen(
                 Text(text = "Sign out")
             }
         }
-    } else if (authState.verificationId.compareTo("") == 0) {
-        LoginWithPhoneNumberScreen(
-            authViewModel,
-            phoneNumber,
-            {
-                if (hasException(authState.requestExceptionMessage))
-                    authViewModel.clearRequestExceptionMessage()
+    } else if (authViewModel.countriesAndDialCodesReady) {
+        if (authState.verificationId.compareTo("") == 0) {
+            LoginWithPhoneNumberScreen(
+                authViewModel.countriesAndDialCodes,
+                phoneNumber,
+                {
+                    if (hasException(authState.requestExceptionMessage))
+                        authViewModel.clearRequestExceptionMessage()
 
-                phoneNumber = it
-            },
-            {
-                phoneAuth.startPhoneNumberVerification(
-                    phoneNumber,
-                    authState.resendingToken
-                )
+                    phoneNumber = it
+                },
+                {
+                    phoneAuth.startPhoneNumberVerification(
+                        phoneNumber,
+                        authState.resendingToken
+                    )
 //                kbController?.hide()
+                },
+                authState.requestInProgress,
+                authState.requestExceptionMessage,
+            )
+        } else VerifyCodeScreen(
+            codeToVerify,
+            {
+                if (it.length <= VERIFICATION_CODE_LENGTH) {
+                    if (hasException(authState.verificationExceptionMessage))
+                        authViewModel.clearVerificationExceptionMessage()
+
+                    if (it.last().code != 10) // Not key Enter
+                        codeToVerify = it
+                }
+
+                if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
+                    phoneAuth.onReceiveCodeToVerify(
+                        authState.verificationId,
+                        codeToVerify
+                    )
+                }
             },
-            authState.requestInProgress,
-            authState.requestExceptionMessage,
+            authState.verificationExceptionMessage,
+            authState.verificationInProgress,
         )
-    } else VerifyCodeScreen(
-        codeToVerify,
-        {
-            if (it.length <= VERIFICATION_CODE_LENGTH) {
-                if (hasException(authState.verificationExceptionMessage))
-                    authViewModel.clearVerificationExceptionMessage()
-
-                if (it.last().code != 10) // Not key Enter
-                    codeToVerify = it
-            }
-
-            if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
-                phoneAuth.onReceiveCodeToVerify(
-                    authState.verificationId,
-                    codeToVerify
-                )
-            }
-        },
-        authState.verificationExceptionMessage,
-        authState.verificationInProgress,
-    )
+    } else if (authViewModel.connectionExceptionMessage != null)
+        Text(text = authViewModel.connectionExceptionMessage!!)
+    else
+        Text("Initializing")
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LoginWithPhoneNumberScreen(
-    authViewModel: AuthViewModel,
+    countriesAndDialCodes: List<CountryAndDialCodeModel>,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -186,15 +192,11 @@ fun LoginWithPhoneNumberScreen(
         modifier = Modifier
             .fillMaxWidth()
     ) {
-        val countryCodeMap = remember{
-//            listOf("Vietnam" to "+84", "United States" to "+1")
-            authViewModel.countriesAndDialCodes
-        }
         var expanded by rememberSaveable {
             mutableStateOf(false)
         }
-        var selectedCountry = rememberSaveable{
-            mutableStateOf("" to "")
+        var selectedCountry by rememberSaveable {
+            mutableStateOf(CountryAndDialCodeModel("", ""))
         }
         var selectedCountryName by rememberSaveable {
             mutableStateOf("")
@@ -216,8 +218,8 @@ fun LoginWithPhoneNumberScreen(
                         )
                     }, colors = ExposedDropdownMenuDefaults.textFieldColors()
                 )
-                val filter = countryCodeMap.filter {
-                    it.first.contains(
+                val filter = countriesAndDialCodes.filter {
+                    it.name.contains(
                         selectedCountryName,
                         ignoreCase = true
                     )
@@ -229,10 +231,10 @@ fun LoginWithPhoneNumberScreen(
                         filter.forEach {
                             DropdownMenuItem(onClick = {
                                 selectedCountry = it
-                                selectedCountryName = it.first
+                                selectedCountryName = it.name
                                 expanded = false
                             }) {
-                                Text(text = it.first)
+                                Text(text = it.name)
                             }
                         }
                     }
@@ -242,7 +244,7 @@ fun LoginWithPhoneNumberScreen(
             Row {
                 Spacer(modifier = Modifier.weight(.14f))
                 OutlinedTextField(
-                    value = selectedCountry.second,
+                    value = selectedCountry.dial_code,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(text = "Mã QG") },
@@ -304,7 +306,6 @@ fun hasException(message: String?) = message != null
 
 
 const val VERIFICATION_CODE_LENGTH = 6
-const val PHONE_NUMBER_LENGTH = 12
 
 @Composable
 fun VerifyCodeScreen(
@@ -387,7 +388,7 @@ fun VerifyCodeScreen(
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
-        LoginWithPhoneNumberScreen("+84", {}, {}, false, null)
+        LoginWithPhoneNumberScreen(listOf(), "", {}, {}, false, null)
     }
 }
 
