@@ -117,70 +117,100 @@ fun AuthHomeScreen(
         mutableStateOf("")
     }
 
+    var selectedCountry by rememberSaveable {
+        mutableStateOf(CountryAndDialCodeModel("", ""))
+    }
+
     val kbController = LocalSoftwareKeyboardController.current
 
     fun hasUserLoggedIn() = authState.userSignedIn
-    if (hasUserLoggedIn()) {
-        codeToVerify = ""
-        Column() {
-            val user = Firebase.auth.currentUser
-            Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
-            Button(onClick = authViewModel::logUserOut) {
-                Text(text = "Sign out")
+
+    when {
+        hasUserLoggedIn() -> {
+            codeToVerify = ""
+            Column() {
+                val user = Firebase.auth.currentUser
+                Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
+                Button(onClick = authViewModel::logUserOut) {
+                    Text(text = "Sign out")
+                }
             }
         }
-    } else if (authViewModel.countriesAndDialCodesReady) {
-        if (authState.verificationId.compareTo("") == 0) {
-            LoginWithPhoneNumberScreen(
-                authViewModel.countriesAndDialCodes,
-                phoneNumber,
-                {
-                    if (hasException(authState.requestExceptionMessage))
-                        authViewModel.clearRequestExceptionMessage()
 
-                    phoneNumber = it
-                },
-                {
-                    phoneAuth.startPhoneNumberVerification(
+        authViewModel.countriesAndDialCodes.isEmpty() -> {
+            Text("Initializing")
+        }
+
+        !authViewModel.connectionExceptionMessage.isNullOrEmpty() -> {
+            Text(text = authViewModel.connectionExceptionMessage!!)
+        }
+
+        else -> {
+            when {
+                authState.verificationId.isEmpty() -> {
+                    LoginWithPhoneNumberScreen(
+                        authViewModel.countriesAndDialCodes,
+                        selectedCountry,
+                        {
+                            selectedCountry = it
+                            if (hasException(authState.requestExceptionMessage))
+                                authViewModel.clearRequestExceptionMessage()
+                        },
                         phoneNumber,
-                        authState.resendingToken
-                    )
+                        {
+                            if (hasException(authState.requestExceptionMessage))
+                                authViewModel.clearRequestExceptionMessage()
+                            phoneNumber = it
+                        },
+                        {
+                            if (selectedCountry.dial_code.isEmpty())
+                                authViewModel.onEmptyDialCode()
+                            else
+                                phoneAuth.startPhoneNumberVerification(
+                                    "${selectedCountry.dial_code}${phoneNumber.trimStart { it == '0' }}",
+                                    authState.resendingToken
+                                )
 //                kbController?.hide()
-                },
-                authState.requestInProgress,
-                authState.requestExceptionMessage,
-            )
-        } else VerifyCodeScreen(
-            codeToVerify,
-            {
-                if (it.length <= VERIFICATION_CODE_LENGTH) {
-                    if (hasException(authState.verificationExceptionMessage))
-                        authViewModel.clearVerificationExceptionMessage()
-
-                    if (it.last().code != 10) // Not key Enter
-                        codeToVerify = it
-                }
-
-                if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
-                    phoneAuth.onReceiveCodeToVerify(
-                        authState.verificationId,
-                        codeToVerify
+                        },
+                        authState.requestInProgress,
+                        authState.requestExceptionMessage,
                     )
                 }
-            },
-            authState.verificationExceptionMessage,
-            authState.verificationInProgress,
-        )
-    } else if (authViewModel.connectionExceptionMessage != null)
-        Text(text = authViewModel.connectionExceptionMessage!!)
-    else
-        Text("Initializing")
+
+                else -> {
+                    VerifyCodeScreen(
+                        codeToVerify,
+                        {
+                            if (it.length <= VERIFICATION_CODE_LENGTH) {
+                                if (hasException(authState.verificationExceptionMessage))
+                                    authViewModel.clearVerificationExceptionMessage()
+
+                                if (it.last().code != 10) // Not key Enter
+                                    codeToVerify = it
+                            }
+
+                            if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
+                                phoneAuth.onReceiveCodeToVerify(
+                                    authState.verificationId,
+                                    codeToVerify
+                                )
+                            }
+                        },
+                        authState.verificationExceptionMessage,
+                        authState.verificationInProgress,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LoginWithPhoneNumberScreen(
     countriesAndDialCodes: List<CountryAndDialCodeModel>,
+    selectedCountry: CountryAndDialCodeModel,
+    onSelectedCountryChange: (CountryAndDialCodeModel) -> Unit,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -195,12 +225,6 @@ fun LoginWithPhoneNumberScreen(
         var expanded by rememberSaveable {
             mutableStateOf(false)
         }
-        var selectedCountry by rememberSaveable {
-            mutableStateOf(CountryAndDialCodeModel("", ""))
-        }
-        var selectedCountryName by rememberSaveable {
-            mutableStateOf("")
-        }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Image(painter = painterResource(id = R.drawable.ic_group_2), null)
@@ -209,8 +233,8 @@ fun LoginWithPhoneNumberScreen(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded }) {
                 TextField(
-                    value = selectedCountryName,
-                    onValueChange = { selectedCountryName = it },
+                    value = selectedCountry.name,
+                    onValueChange = { onSelectedCountryChange(selectedCountry.copy(name = it)) },
                     label = { Text(text = "Quốc gia") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(
@@ -220,7 +244,7 @@ fun LoginWithPhoneNumberScreen(
                 )
                 val filter = countriesAndDialCodes.filter {
                     it.name.contains(
-                        selectedCountryName,
+                        selectedCountry.name,
                         ignoreCase = true
                     )
                 }
@@ -230,8 +254,7 @@ fun LoginWithPhoneNumberScreen(
                         onDismissRequest = { expanded = false }) {
                         filter.forEach {
                             DropdownMenuItem(onClick = {
-                                selectedCountry = it
-                                selectedCountryName = it.name
+                                onSelectedCountryChange(it)
                                 expanded = false
                             }) {
                                 Text(text = it.name)
@@ -242,7 +265,7 @@ fun LoginWithPhoneNumberScreen(
             }
 
             Row {
-                Spacer(modifier = Modifier.weight(.14f))
+                Spacer(modifier = Modifier.weight(.142f))
                 OutlinedTextField(
                     value = selectedCountry.dial_code,
                     onValueChange = {},
@@ -268,7 +291,7 @@ fun LoginWithPhoneNumberScreen(
                     modifier = Modifier
                         .weight(.45f)
                 )
-                Spacer(modifier = Modifier.weight(.14f))
+                Spacer(modifier = Modifier.weight(.142f))
             }
 
             if (hasException(exceptionMessage)) {
@@ -302,8 +325,7 @@ fun LoginWithPhoneNumberScreen(
     }
 }
 
-fun hasException(message: String?) = message != null
-
+fun hasException(message: String?) = !message.isNullOrEmpty()
 
 const val VERIFICATION_CODE_LENGTH = 6
 
@@ -388,7 +410,16 @@ fun VerifyCodeScreen(
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
-        LoginWithPhoneNumberScreen(listOf(), "", {}, {}, false, null)
+        LoginWithPhoneNumberScreen(
+            listOf(),
+            CountryAndDialCodeModel("", ""),
+            {},
+            "",
+            {},
+            {},
+            false,
+            null
+        )
     }
 }
 
