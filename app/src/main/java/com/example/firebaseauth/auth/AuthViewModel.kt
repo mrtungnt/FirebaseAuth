@@ -1,29 +1,24 @@
 package com.example.firebaseauth.auth
 
-import android.util.Log
-import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.SavedStateHandleSaveableApi
-import androidx.lifecycle.viewmodel.compose.saveable
-import com.example.firebaseauth.data.network.CountryAndDialCodeModel
-import com.example.firebaseauth.data.CountryAndDialCodeRepository
+import com.example.firebaseauth.data.CountriesAndDialCodesRepository
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.firebaseauth.CountriesAndDialCodes
 
 @HiltViewModel
-@OptIn(SavedStateHandleSaveableApi::class)
 class AuthViewModel @Inject constructor(
-    private val countryAndDialCodeRepository: CountryAndDialCodeRepository,
+    private val countriesAndDialCodesRepository: CountriesAndDialCodesRepository,
+//    private val dataStoreRepository: DataStoreRepository,
     private val authState: AuthUIState,
     private val state: SavedStateHandle
 ) :
@@ -31,28 +26,23 @@ class AuthViewModel @Inject constructor(
     private val stateKeyName = "savedUIState"
     val authStateFlow = state.getStateFlow(stateKeyName, authState)
 
-    private var _countriesAndDialCodes: List<CountryAndDialCodeModel> by state.saveable {
-        mutableStateOf(
-            emptyList()
-        )
-    }
-    val countriesAndDialCodes
-        get() = _countriesAndDialCodes
+    private var _countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>? by mutableStateOf(
+        null
+    )
+
+    val countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>
+        get() = _countriesAndDialCodes ?: emptyList()
 
     private var _connectionExceptionMessage: String? by mutableStateOf(null)
     val connectionExceptionMessage get() = _connectionExceptionMessage
 
     init {
-        if (countriesAndDialCodes.isEmpty())
-            viewModelScope.launch {
-                val r = countryAndDialCodeRepository.getCountriesAndDialCodes()
-                if (r.isSuccess) {
-//                    Snapshot.withMutableSnapshot {
-                    _countriesAndDialCodes = r.getOrNull()?.data!!
-//                    }
-                } else r.onFailure { _connectionExceptionMessage = it.message }
-            }
-        else Log.d("countriesAndDialCodes", ": not Empty")
+        viewModelScope.launch {
+            val r = countriesAndDialCodesRepository.getCountriesAndDialCodes()
+            if (r.isSuccess) {
+                _countriesAndDialCodes = r.getOrNull()?.dataList
+            } else r.onFailure { _connectionExceptionMessage = it.message }
+        }
     }
 
     fun logUserOut() {

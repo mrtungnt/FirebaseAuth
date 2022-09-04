@@ -26,20 +26,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.firebaseauth.CountriesAndDialCodes
 import com.example.firebaseauth.R
-import com.example.firebaseauth.data.network.CountryAndDialCodeModel
+import com.example.firebaseauth.data.network.CountryAndDialCodeModelRemote
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
 
         setContent {
@@ -118,7 +119,10 @@ fun AuthHomeScreen(
     }
 
     var selectedCountry by rememberSaveable {
-        mutableStateOf(CountryAndDialCodeModel("", ""))
+        mutableStateOf(
+            CountriesAndDialCodes.CountryAndDialCode.newBuilder().setName("").setDialCode("")
+                .build()
+        )
     }
 
     val kbController = LocalSoftwareKeyboardController.current
@@ -137,9 +141,10 @@ fun AuthHomeScreen(
             }
         }
 
-        authViewModel.countriesAndDialCodes.isEmpty() -> {
+//        authViewModel.countriesAndDialCodes.isEmpty() -> {
+        /*authViewModel.countriesAndDialCodes.first().dataList.isEmpty() -> {
             Text("Initializing")
-        }
+        }*/
 
         !authViewModel.connectionExceptionMessage.isNullOrEmpty() -> {
             Text(text = authViewModel.connectionExceptionMessage!!)
@@ -163,11 +168,11 @@ fun AuthHomeScreen(
                             phoneNumber = it
                         },
                         {
-                            if (selectedCountry.dial_code.isEmpty())
+                            if (selectedCountry.dialCode.isEmpty())
                                 authViewModel.onEmptyDialCode()
                             else
                                 phoneAuth.startPhoneNumberVerification(
-                                    "${selectedCountry.dial_code}${phoneNumber.trimStart { it == '0' }}",
+                                    "${selectedCountry.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                     authState.resendingToken
                                 )
 //                kbController?.hide()
@@ -208,9 +213,9 @@ fun AuthHomeScreen(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LoginWithPhoneNumberScreen(
-    countriesAndDialCodes: List<CountryAndDialCodeModel>,
-    selectedCountry: CountryAndDialCodeModel,
-    onSelectedCountryChange: (CountryAndDialCodeModel) -> Unit,
+    countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>,
+    selectedCountry: CountriesAndDialCodes.CountryAndDialCode,
+    onSelectedCountryChange: (CountriesAndDialCodes.CountryAndDialCode) -> Unit,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -234,7 +239,11 @@ fun LoginWithPhoneNumberScreen(
                 onExpandedChange = { expanded = !expanded }) {
                 TextField(
                     value = selectedCountry.name,
-                    onValueChange = { onSelectedCountryChange(selectedCountry.copy(name = it)) },
+                    onValueChange = {
+                        onSelectedCountryChange(
+                            selectedCountry.toBuilder().setName(it).build()
+                        )
+                    },
                     label = { Text(text = "Quốc gia") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(
@@ -267,7 +276,7 @@ fun LoginWithPhoneNumberScreen(
             Row {
                 Spacer(modifier = Modifier.weight(.142f))
                 OutlinedTextField(
-                    value = selectedCountry.dial_code,
+                    value = selectedCountry.dialCode,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(text = "Mã QG") },
@@ -412,7 +421,7 @@ fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
         LoginWithPhoneNumberScreen(
             listOf(),
-            CountryAndDialCodeModel("", ""),
+            CountriesAndDialCodes.CountryAndDialCode.getDefaultInstance(),
             {},
             "",
             {},
