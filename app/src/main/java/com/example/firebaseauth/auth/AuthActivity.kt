@@ -1,11 +1,13 @@
 package com.example.firebaseauth.auth
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -129,10 +131,17 @@ fun AuthHomeScreen(
     val kbController = LocalSoftwareKeyboardController.current
 
     fun hasUserLoggedIn() = authState.userSignedIn
-    
-    LazyColumn(state = rememberLazyListState()) { 
-        items(count = authViewModel.countriesAndDialCodes.count()){
-            Text(text = "${authViewModel.countriesAndDialCodes[it].name}")
+
+    LazyColumn(state = rememberLazyListState()) {
+        items(count = authViewModel.countriesAndDialCodes.count()) {
+            Text(
+                text = "${authViewModel.countriesAndDialCodes[it].name}",
+                modifier = Modifier.clickable {
+                    Log.d(
+                        "TAG",
+                        "AuthHomeScreen: $${authViewModel.countriesAndDialCodes[it].name} clicked "
+                    )
+                })
         }
     }
 

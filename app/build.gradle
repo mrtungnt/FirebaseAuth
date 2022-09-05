@@ -94,14 +94,14 @@ dependencies {
     // To use Kotlin Symbol Processing (KSP)
 //    ksp "androidx.room:room-compiler:$room_version"
 
-//    implementation "androidx.datastore:datastore:1.0.0"
     implementation "androidx.datastore:datastore:1.0.0"
-    implementation "com.google.protobuf:protobuf-javalite:3.19.4"
+    implementation "com.google.protobuf:protobuf-javalite:3.21.5"
+//    implementation "com.google.protobuf:protobuf-kotlin-lite:3.21.5"
 }
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.19.4"
+        artifact = "com.google.protobuf:protoc:3.21.5"
     }
 
     // Generates the java Protobuf-lite code for the Protobufs in this project. See
@@ -113,6 +113,9 @@ protobuf {
                 java {
                     option 'lite'
                 }
+                /*kotlin {
+                    option 'lite'
+                }*/
             }
         }
     }
