@@ -7,6 +7,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,14 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountriesAndDialCodes
 import com.example.firebaseauth.R
-import com.example.firebaseauth.data.network.CountryAndDialCodeModelRemote
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -118,7 +119,7 @@ fun AuthHomeScreen(
         mutableStateOf("")
     }
 
-    var selectedCountry by rememberSaveable {
+    var selectedCountry by remember {
         mutableStateOf(
             CountriesAndDialCodes.CountryAndDialCode.newBuilder().setName("").setDialCode("")
                 .build()
@@ -128,7 +129,14 @@ fun AuthHomeScreen(
     val kbController = LocalSoftwareKeyboardController.current
 
     fun hasUserLoggedIn() = authState.userSignedIn
+    
+    LazyColumn(state = rememberLazyListState()) { 
+        items(count = authViewModel.countriesAndDialCodes.count()){
+            Text(text = "${authViewModel.countriesAndDialCodes[it].name}")
+        }
+    }
 
+/*
     when {
         hasUserLoggedIn() -> {
             codeToVerify = ""
@@ -141,10 +149,9 @@ fun AuthHomeScreen(
             }
         }
 
-//        authViewModel.countriesAndDialCodes.isEmpty() -> {
-        /*authViewModel.countriesAndDialCodes.first().dataList.isEmpty() -> {
+        authViewModel.countriesAndDialCodes.isEmpty() -> {
             Text("Initializing")
-        }*/
+        }
 
         !authViewModel.connectionExceptionMessage.isNullOrEmpty() -> {
             Text(text = authViewModel.connectionExceptionMessage!!)
@@ -208,6 +215,7 @@ fun AuthHomeScreen(
             }
         }
     }
+*/
 }
 
 @OptIn(ExperimentalMaterialApi::class)

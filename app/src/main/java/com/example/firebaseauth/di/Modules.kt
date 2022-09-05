@@ -30,11 +30,7 @@ object Modules {
         requestInProgress = false,
         verificationInProgress = false,
     )
-}
 
-@InstallIn(SingletonComponent::class)
-@Module
-object DataStoreModule {
     @Singleton
     @Provides
     fun providesDataStore(@ApplicationContext context: Context): DataStore<CountriesAndDialCodes> =
