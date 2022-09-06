@@ -43,7 +43,7 @@ android {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.2.0-rc02'
+        kotlinCompilerExtensionVersion '1.2.0'
     }
     packagingOptions {
         resources {
@@ -51,6 +51,19 @@ android {
         }
     }
 }
+
+/*sourceSets.all {
+    java.srcDir("$buildDir/generated/source/proto/debug/java")
+//    java.srcDir("build/generated/source/proto/$name/kotlin")
+}*/
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KaptGenerateStubs.class)
+        .configureEach {
+//            source("$buildDir/generated/source/proto/debug/java")
+            kotlinOptions {
+                freeCompilerArgs = ["-Xjava-source-roots=$buildDir/generated/source/proto/debug/java"]
+            }
+        }
 
 dependencies {
     ext {
@@ -120,3 +133,4 @@ protobuf {
         }
     }
 }
+
