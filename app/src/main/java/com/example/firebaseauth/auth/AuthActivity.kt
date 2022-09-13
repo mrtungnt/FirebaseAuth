@@ -1,17 +1,14 @@
 package com.example.firebaseauth.auth
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountriesAndDialCodes
 import com.example.firebaseauth.R
+import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
@@ -132,20 +130,6 @@ fun AuthHomeScreen(
 
     fun hasUserLoggedIn() = authState.userSignedIn
 
-    LazyColumn(state = rememberLazyListState()) {
-        items(count = authViewModel.countriesAndDialCodes.count()) {
-            Text(
-                text = "${authViewModel.countriesAndDialCodes[it].name}",
-                modifier = Modifier.clickable {
-                    Log.d(
-                        "TAG",
-                        "AuthHomeScreen: $${authViewModel.countriesAndDialCodes[it].name} clicked "
-                    )
-                })
-        }
-    }
-
-/*
     when {
         hasUserLoggedIn() -> {
             codeToVerify = ""
@@ -224,7 +208,7 @@ fun AuthHomeScreen(
             }
         }
     }
-*/
+
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -249,75 +233,83 @@ fun LoginWithPhoneNumberScreen(
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(painter = painterResource(id = R.drawable.ic_group_2), null)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.requiredWidth(280.dp)
+            ) {
+                Image(painter = painterResource(id = R.drawable.ic_group_2), null)
 
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }) {
-                TextField(
-                    value = selectedCountry.name,
-                    onValueChange = {
-                        onSelectedCountryChange(
-                            selectedCountry.toBuilder().setName(it).build()
-                        )
-                    },
-                    label = { Text(text = "Quốc gia") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(
-                            expanded = expanded
-                        )
-                    }, colors = ExposedDropdownMenuDefaults.textFieldColors()
-                )
-                val filter = countriesAndDialCodes.filter {
-                    it.name.contains(
-                        selectedCountry.name,
-                        ignoreCase = true
+                ForkedExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                ) {
+                    TextField(
+                        value = selectedCountry.name,
+                        onValueChange = {
+                            onSelectedCountryChange(
+                                selectedCountry.toBuilder().setName(it).build()
+                            )
+                        },
+                        label = { Text(text = "Quốc gia") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                expanded = expanded
+                            )
+                        }, colors = ExposedDropdownMenuDefaults.textFieldColors()
                     )
-                }
-                if (filter.isNotEmpty()) {
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }) {
-                        filter.forEach {
-                            DropdownMenuItem(onClick = {
-                                onSelectedCountryChange(it)
-                                expanded = false
-                            }) {
-                                Text(text = it.name)
+                    val filter = countriesAndDialCodes.filter {
+                        it.name.contains(
+                            selectedCountry.name,
+                            ignoreCase = true
+                        )
+                    }
+                    if (filter.isNotEmpty()) {
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier
+                        ) {
+                            LazyColumn {
+                                items(filter) {
+                                    DropdownMenuItem(onClick = {
+                                        onSelectedCountryChange(it)
+                                        expanded = false
+                                    }) {
+                                        Text(text = it.name)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            Row {
-                Spacer(modifier = Modifier.weight(.142f))
-                OutlinedTextField(
-                    value = selectedCountry.dialCode,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(text = "Mã QG") },
-                    modifier = Modifier
-                        .weight(.25f)
-                )
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = onPhoneNumberChange,
-                    singleLine = true,
-                    label = {
-                        Text(
-                            text = "Nhập số điện thoại"
-                        )
-                    },
-                    keyboardActions = KeyboardActions(onDone = onDone),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier
-                        .weight(.45f)
-                )
-                Spacer(modifier = Modifier.weight(.142f))
+                Row {
+                    OutlinedTextField(
+                        value = selectedCountry.dialCode,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(text = "Mã QG") },
+                        modifier = Modifier
+                            .weight(.3f)
+                    )
+                    OutlinedTextField(
+                        value = phoneNumber,
+                        onValueChange = onPhoneNumberChange,
+                        singleLine = true,
+                        label = {
+                            Text(
+                                text = "Nhập số điện thoại"
+                            )
+                        },
+                        keyboardActions = KeyboardActions(onDone = onDone),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Phone,
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier
+                            .weight(.7f)
+                    )
+                }
             }
 
             if (hasException(exceptionMessage)) {
@@ -375,7 +367,6 @@ fun VerifyCodeScreen(
         TextField(
             value = codeToVerify,
             onValueChange = onCodeChange,
-//            modifier = Modifier.widthIn(max = 90.dp),
             textStyle = TextStyle(textAlign = TextAlign.Center),
             singleLine = true,
             keyboardOptions = KeyboardOptions(

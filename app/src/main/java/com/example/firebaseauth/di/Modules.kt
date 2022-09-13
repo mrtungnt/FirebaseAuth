@@ -5,8 +5,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import com.example.firebaseauth.CountriesAndDialCodes
+import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthUIState
 import com.example.firebaseauth.data.CountriesAndDialCodesSerializer
+import com.example.firebaseauth.data.SelectedCountrySerializer
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -15,7 +17,14 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+annotation class CountriesAndDialCodesDataStore
+
+@Qualifier
+annotation class SelectedCountryDataStore
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -31,14 +40,26 @@ object Modules {
         verificationInProgress = false,
     )
 
+    @CountriesAndDialCodesDataStore
     @Singleton
     @Provides
-    fun providesDataStore(@ApplicationContext context: Context): DataStore<CountriesAndDialCodes> =
+    fun providesCountriesAndDialCodesDataStore(@ApplicationContext context: Context): DataStore<CountriesAndDialCodes> =
         DataStoreFactory.create(serializer = CountriesAndDialCodesSerializer, produceFile = {
             context.dataStoreFile(
-                DATA_STORE_FILE_NAME
+                COUNTRIES_AND_DIAL_CODES_FILE_NAME
+            )
+        })
+
+    @SelectedCountryDataStore
+    @Singleton
+    @Provides
+    fun providesSelectedCountryDataStore(@ApplicationContext context: Context): DataStore<SelectedCountry> =
+        DataStoreFactory.create(serializer = SelectedCountrySerializer, produceFile = {
+            context.dataStoreFile(
+                SELECTED_COUNTRY_FILE_NAME
             )
         })
 }
 
-const val DATA_STORE_FILE_NAME = "datastore.pb"
+const val COUNTRIES_AND_DIAL_CODES_FILE_NAME = "countries_and_dial_codes.pb"
+const val SELECTED_COUNTRY_FILE_NAME = "selected_country.pb"

@@ -14,11 +14,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.firebaseauth.CountriesAndDialCodes
+import com.example.firebaseauth.SelectedCountry
+import com.example.firebaseauth.data.SelectedCountryRepository
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val countriesAndDialCodesRepository: CountriesAndDialCodesRepository,
-//    private val dataStoreRepository: DataStoreRepository,
+    private val selectedCountry: SelectedCountryRepository,
     private val authState: AuthUIState,
     private val state: SavedStateHandle
 ) :
