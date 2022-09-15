@@ -9,6 +9,7 @@ import com.example.firebaseauth.data.network.CountryAndDialCodeModelRemote
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.onEmpty
 import javax.inject.Inject
 
 
@@ -32,8 +33,9 @@ class CountriesAndDialCodesRepository @Inject constructor(
                                 .setDialCode(it.dial_code).build()
                         )
                     }
-                    localSource.dataStore.updateData { it.toBuilder().addAllData(c).build() }
-                    Result.success(localSource.getData().last())
+                    localSource.dataStore.updateData { it.toBuilder().addAllData(c).build();
+                    }
+                    Result.success(localSource.getData().first())
                 } else
                     Result.failure(Exception(r.exceptionOrNull()))
             }

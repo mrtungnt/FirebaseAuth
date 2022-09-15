@@ -7,6 +7,7 @@ import com.example.firebaseauth.di.SelectedCountryDataStore
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
-class SelectedCountryLocalSource @Inject constructor(@SelectedCountryDataStore private val dataStore: DataStore<SelectedCountry>) {
+class SelectedCountryLocalSource @Inject constructor(@SelectedCountryDataStore val dataStore: DataStore<SelectedCountry>) {
     suspend fun getSelectedCountry() = Result.success(dataStore.data.first().selectedCountry)
+    fun getFlowOfSelectedCountry() = dataStore.data
 }

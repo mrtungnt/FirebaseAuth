@@ -30,13 +30,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountriesAndDialCodes
 import com.example.firebaseauth.R
+import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -111,6 +114,9 @@ fun AuthHomeScreen(
 ) {
     val authState by authViewModel.authStateFlow.collectAsState()
 
+    val selectedCountry by
+    authViewModel.selectedCountry.collectAsState(initial = SelectedCountry.getDefaultInstance())
+
     var codeToVerify by rememberSaveable {
         mutableStateOf("")
     }
@@ -119,12 +125,12 @@ fun AuthHomeScreen(
         mutableStateOf("")
     }
 
-    var selectedCountry by remember {
+    /*var selectedCountry by remember {
         mutableStateOf(
             CountriesAndDialCodes.CountryAndDialCode.newBuilder().setName("").setDialCode("")
                 .build()
         )
-    }
+    }*/
 
     val kbController = LocalSoftwareKeyboardController.current
 
@@ -157,7 +163,7 @@ fun AuthHomeScreen(
                         authViewModel.countriesAndDialCodes,
                         selectedCountry,
                         {
-                            selectedCountry = it
+                            authViewModel.onSelectedCountryChange(it)
                             if (hasException(authState.requestExceptionMessage))
                                 authViewModel.clearRequestExceptionMessage()
                         },
@@ -168,11 +174,11 @@ fun AuthHomeScreen(
                             phoneNumber = it
                         },
                         {
-                            if (selectedCountry.dialCode.isEmpty())
+                            if (selectedCountry.selectedCountry.dialCode.isEmpty())
                                 authViewModel.onEmptyDialCode()
                             else
                                 phoneAuth.startPhoneNumberVerification(
-                                    "${selectedCountry.dialCode}${phoneNumber.trimStart { it == '0' }}",
+                                    "${selectedCountry.selectedCountry.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                     authState.resendingToken
                                 )
 //                kbController?.hide()
@@ -215,8 +221,8 @@ fun AuthHomeScreen(
 @Composable
 fun LoginWithPhoneNumberScreen(
     countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>,
-    selectedCountry: CountriesAndDialCodes.CountryAndDialCode,
-    onSelectedCountryChange: (CountriesAndDialCodes.CountryAndDialCode) -> Unit,
+    selectedCountry: SelectedCountry,
+    onSelectedCountryChange: suspend (CountriesAndDialCodes.CountryAndDialCode) -> Unit,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -244,11 +250,17 @@ fun LoginWithPhoneNumberScreen(
                     onExpandedChange = { expanded = !expanded },
                 ) {
                     TextField(
-                        value = selectedCountry.name,
+                        value = selectedCountry.selectedCountry.name,
                         onValueChange = {
-                            onSelectedCountryChange(
-                                selectedCountry.toBuilder().setName(it).build()
-                            )
+                            GlobalScope.launch {
+                                onSelectedCountryChange(
+                                    CountriesAndDialCodes.CountryAndDialCode.newBuilder()
+                                        .setName(selectedCountry.selectedCountry.name)
+                                        .setDialCode(selectedCountry.selectedCountry.dialCode)
+                                        .build()
+                                )
+                            }
+
                         },
                         label = { Text(text = "Quốc gia") },
                         trailingIcon = {
@@ -259,7 +271,7 @@ fun LoginWithPhoneNumberScreen(
                     )
                     val filter = countriesAndDialCodes.filter {
                         it.name.contains(
-                            selectedCountry.name,
+                            selectedCountry.selectedCountry.name,
                             ignoreCase = true
                         )
                     }
@@ -272,7 +284,9 @@ fun LoginWithPhoneNumberScreen(
                             LazyColumn {
                                 items(filter) {
                                     DropdownMenuItem(onClick = {
-                                        onSelectedCountryChange(it)
+                                        GlobalScope.launch {
+                                            onSelectedCountryChange(it)
+                                        }
                                         expanded = false
                                     }) {
                                         Text(text = it.name)
@@ -285,7 +299,7 @@ fun LoginWithPhoneNumberScreen(
 
                 Row {
                     OutlinedTextField(
-                        value = selectedCountry.dialCode,
+                        value = selectedCountry.selectedCountry.dialCode,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(text = "Mã QG") },
@@ -429,7 +443,7 @@ fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
         LoginWithPhoneNumberScreen(
             listOf(),
-            CountriesAndDialCodes.CountryAndDialCode.getDefaultInstance(),
+            SelectedCountry.getDefaultInstance(),
             {},
             "",
             {},

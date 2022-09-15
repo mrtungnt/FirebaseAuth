@@ -6,21 +6,20 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.firebaseauth.CountriesAndDialCodes
 import com.example.firebaseauth.data.CountriesAndDialCodesRepository
+import com.example.firebaseauth.data.SelectedCountryRepository
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.firebaseauth.CountriesAndDialCodes
-import com.example.firebaseauth.SelectedCountry
-import com.example.firebaseauth.data.SelectedCountryRepository
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val countriesAndDialCodesRepository: CountriesAndDialCodesRepository,
-    private val selectedCountry: SelectedCountryRepository,
+    private val selectedCountryRepository: SelectedCountryRepository,
     private val authState: AuthUIState,
     private val state: SavedStateHandle
 ) :
@@ -28,22 +27,25 @@ class AuthViewModel @Inject constructor(
     private val stateKeyName = "savedUIState"
     val authStateFlow = state.getStateFlow(stateKeyName, authState)
 
-    private var _countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>? by mutableStateOf(
-        null
+    private var _countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode> by mutableStateOf(
+        emptyList()
     )
 
-    val countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>
-        get() = _countriesAndDialCodes ?: emptyList()
+    val countriesAndDialCodes get() = _countriesAndDialCodes
 
-    private var _connectionExceptionMessage: String? by mutableStateOf(null)
+    val selectedCountry = selectedCountryRepository.getData()
+
+    private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage
 
     init {
         viewModelScope.launch {
             val r = countriesAndDialCodesRepository.getCountriesAndDialCodes()
             if (r.isSuccess) {
-                _countriesAndDialCodes = r.getOrNull()?.dataList
-            } else r.onFailure { _connectionExceptionMessage = it.message }
+                _countriesAndDialCodes = r.getOrNull()?.dataList!!
+            } else r.onFailure {
+                _connectionExceptionMessage = it?.message!!
+            }
         }
     }
 
@@ -110,5 +112,9 @@ class AuthViewModel @Inject constructor(
         state[stateKeyName] = authStateFlow.value.copy(
             requestInProgress = inProgress
         )
+    }
+
+    suspend fun onSelectedCountryChange(selectedCountry: CountriesAndDialCodes.CountryAndDialCode) {
+        selectedCountryRepository.updateSelectedCountry(selectedCountry)
     }
 }
