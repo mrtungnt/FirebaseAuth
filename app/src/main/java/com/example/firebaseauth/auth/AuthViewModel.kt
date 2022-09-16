@@ -7,8 +7,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebaseauth.CountriesAndDialCodes
+import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.data.CountriesAndDialCodesRepository
-import com.example.firebaseauth.data.SelectedCountryRepository
+import com.example.firebaseauth.data.SavedSelectedCountryRepository
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -19,7 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val countriesAndDialCodesRepository: CountriesAndDialCodesRepository,
-    private val selectedCountryRepository: SelectedCountryRepository,
+    private val savedSelectedCountryRepository: SavedSelectedCountryRepository,
     private val authState: AuthUIState,
     private val state: SavedStateHandle
 ) :
@@ -33,7 +34,8 @@ class AuthViewModel @Inject constructor(
 
     val countriesAndDialCodes get() = _countriesAndDialCodes
 
-    val selectedCountry = selectedCountryRepository.getData()
+    private var _savedSelectedCountry by mutableStateOf(SelectedCountry.getDefaultInstance())
+    val savedSelectedCountry: SelectedCountry get() = _savedSelectedCountry
 
     private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage
@@ -44,7 +46,16 @@ class AuthViewModel @Inject constructor(
             if (r.isSuccess) {
                 _countriesAndDialCodes = r.getOrNull()?.dataList!!
             } else r.onFailure {
-                _connectionExceptionMessage = it?.message!!
+                _connectionExceptionMessage = it.message!!
+            }
+        }
+
+        viewModelScope.launch {
+            val r = savedSelectedCountryRepository.getSelectedCountry()
+            if (r.isSuccess) {
+                _savedSelectedCountry = r.getOrNull()
+            } else r.onFailure {
+                _connectionExceptionMessage = it.message!!
             }
         }
     }
@@ -114,7 +125,9 @@ class AuthViewModel @Inject constructor(
         )
     }
 
-    suspend fun onSelectedCountryChange(selectedCountry: CountriesAndDialCodes.CountryAndDialCode) {
-        selectedCountryRepository.updateSelectedCountry(selectedCountry)
+    fun saveSelectedCountry(selectedCountry: CountriesAndDialCodes.CountryAndDialCode) {
+        viewModelScope.launch {
+            savedSelectedCountryRepository.saveSelectedCountry(selectedCountry)
+        }
     }
 }

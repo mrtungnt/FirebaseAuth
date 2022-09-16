@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -30,16 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountriesAndDialCodes
 import com.example.firebaseauth.R
-import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -114,32 +112,11 @@ fun AuthHomeScreen(
 ) {
     val authState by authViewModel.authStateFlow.collectAsState()
 
-    val selectedCountry by
-    authViewModel.selectedCountry.collectAsState(initial = SelectedCountry.getDefaultInstance())
-
-    var codeToVerify by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var phoneNumber by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    /*var selectedCountry by remember {
-        mutableStateOf(
-            CountriesAndDialCodes.CountryAndDialCode.newBuilder().setName("").setDialCode("")
-                .build()
-        )
-    }*/
-
-    val kbController = LocalSoftwareKeyboardController.current
-
     fun hasUserLoggedIn() = authState.userSignedIn
 
     when {
         hasUserLoggedIn() -> {
-            codeToVerify = ""
-            Column() {
+            Column {
                 val user = Firebase.auth.currentUser
                 Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
                 Button(onClick = authViewModel::logUserOut) {
@@ -148,50 +125,70 @@ fun AuthHomeScreen(
             }
         }
 
-        authViewModel.countriesAndDialCodes.isEmpty() -> {
-            Text("Initializing")
+        authViewModel.countriesAndDialCodes.isEmpty() || authViewModel.savedSelectedCountry.countryAndDialCode == null -> {
+            Text("Khởi tạo")
         }
 
-        !authViewModel.connectionExceptionMessage.isNullOrEmpty() -> {
-            Text(text = authViewModel.connectionExceptionMessage!!)
+        authViewModel.connectionExceptionMessage.isNotEmpty() -> {
+            Text(text = authViewModel.connectionExceptionMessage)
         }
 
         else -> {
             when {
                 authState.verificationId.isEmpty() -> {
+                    var phoneNumber by rememberSaveable {
+                        mutableStateOf("")
+                    }
+
+                    var selectedCountry by rememberSaveable {
+                        mutableStateOf(
+                            Pair(
+                                authViewModel.savedSelectedCountry.countryAndDialCode.name,
+                                authViewModel.savedSelectedCountry.countryAndDialCode.dialCode
+                            )
+                        )
+                    }
+
+                    val kbController = LocalSoftwareKeyboardController.current
+
                     LoginWithPhoneNumberScreen(
-                        authViewModel.countriesAndDialCodes,
-                        selectedCountry,
-                        {
-                            authViewModel.onSelectedCountryChange(it)
+                        countriesAndDialCodes = authViewModel.countriesAndDialCodes,
+                        selectedCountry = selectedCountry,
+                        onSelectedCountryChange = {
+                            selectedCountry = Pair(it.name, it.dialCode)
+                            authViewModel.saveSelectedCountry(it)
                             if (hasException(authState.requestExceptionMessage))
                                 authViewModel.clearRequestExceptionMessage()
                         },
-                        phoneNumber,
-                        {
+                        phoneNumber = phoneNumber,
+                        onPhoneNumberChange = {
                             if (hasException(authState.requestExceptionMessage))
                                 authViewModel.clearRequestExceptionMessage()
                             phoneNumber = it
                         },
-                        {
-                            if (selectedCountry.selectedCountry.dialCode.isEmpty())
+                        onDone = {
+                            if (selectedCountry.second.isEmpty())
                                 authViewModel.onEmptyDialCode()
                             else
                                 phoneAuth.startPhoneNumberVerification(
-                                    "${selectedCountry.selectedCountry.dialCode}${phoneNumber.trimStart { it == '0' }}",
+                                    "${selectedCountry.second}${phoneNumber.trimStart { it == '0' }}",
                                     authState.resendingToken
                                 )
 //                kbController?.hide()
                         },
-                        authState.requestInProgress,
-                        authState.requestExceptionMessage,
+                        requestInProgress = authState.requestInProgress,
+                        exceptionMessage = authState.requestExceptionMessage,
                     )
                 }
 
                 else -> {
+                    var codeToVerify by rememberSaveable {
+                        mutableStateOf("")
+                    }
+
                     VerifyCodeScreen(
-                        codeToVerify,
-                        {
+                        codeToVerify = codeToVerify,
+                        onCodeChange = {
                             if (it.length <= VERIFICATION_CODE_LENGTH) {
                                 if (hasException(authState.verificationExceptionMessage))
                                     authViewModel.clearVerificationExceptionMessage()
@@ -207,8 +204,8 @@ fun AuthHomeScreen(
                                 )
                             }
                         },
-                        authState.verificationExceptionMessage,
-                        authState.verificationInProgress,
+                        exceptionMessage = authState.verificationExceptionMessage,
+                        verificationInProgress = authState.verificationInProgress,
                     )
                 }
             }
@@ -221,8 +218,8 @@ fun AuthHomeScreen(
 @Composable
 fun LoginWithPhoneNumberScreen(
     countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>,
-    selectedCountry: SelectedCountry,
-    onSelectedCountryChange: suspend (CountriesAndDialCodes.CountryAndDialCode) -> Unit,
+    selectedCountry: Pair<String, String>,
+    onSelectedCountryChange: (CountriesAndDialCodes.CountryAndDialCode) -> Unit,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -238,6 +235,10 @@ fun LoginWithPhoneNumberScreen(
             mutableStateOf(false)
         }
 
+        var selectedCountryName by remember {
+            mutableStateOf(selectedCountry.first)
+        }
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -250,28 +251,20 @@ fun LoginWithPhoneNumberScreen(
                     onExpandedChange = { expanded = !expanded },
                 ) {
                     TextField(
-                        value = selectedCountry.selectedCountry.name,
-                        onValueChange = {
-                            GlobalScope.launch {
-                                onSelectedCountryChange(
-                                    CountriesAndDialCodes.CountryAndDialCode.newBuilder()
-                                        .setName(selectedCountry.selectedCountry.name)
-                                        .setDialCode(selectedCountry.selectedCountry.dialCode)
-                                        .build()
-                                )
-                            }
-
-                        },
+                        value = selectedCountryName,
+                        onValueChange = { selectedCountryName = it },
                         label = { Text(text = "Quốc gia") },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(
                                 expanded = expanded
                             )
-                        }, colors = ExposedDropdownMenuDefaults.textFieldColors()
+                        },
+                        colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                        singleLine = true,
                     )
                     val filter = countriesAndDialCodes.filter {
                         it.name.contains(
-                            selectedCountry.selectedCountry.name,
+                            selectedCountryName,
                             ignoreCase = true
                         )
                     }
@@ -284,9 +277,8 @@ fun LoginWithPhoneNumberScreen(
                             LazyColumn {
                                 items(filter) {
                                     DropdownMenuItem(onClick = {
-                                        GlobalScope.launch {
-                                            onSelectedCountryChange(it)
-                                        }
+                                        selectedCountryName = it.name
+                                        onSelectedCountryChange(it)
                                         expanded = false
                                     }) {
                                         Text(text = it.name)
@@ -297,9 +289,37 @@ fun LoginWithPhoneNumberScreen(
                     }
                 }
 
-                Row {
+//                Row {
+//                    OutlinedTextField(
+//                        value = selectedCountry.second,
+//                        onValueChange = {},
+//                        readOnly = true,
+//                        label = { Text(text = "Mã QG") },
+//                        modifier = Modifier
+//                            .weight(.3f)
+//                    )
+//                    OutlinedTextField(
+//                        value = phoneNumber,
+//                        onValueChange = onPhoneNumberChange,
+//                        singleLine = true,
+//                        label = {
+//                            Text(
+//                                text = "Nhập số điện thoại"
+//                            )
+//                        },
+//                        keyboardActions = KeyboardActions(onDone = onDone),
+//                        keyboardOptions = KeyboardOptions(
+//                            keyboardType = KeyboardType.Phone,
+//                            imeAction = ImeAction.Done
+//                        ),
+//                        modifier = Modifier
+//                            .weight(.7f)
+//                    )
+//                }
+
+                PhoneNumberInput {
                     OutlinedTextField(
-                        value = selectedCountry.selectedCountry.dialCode,
+                        value = selectedCountry.second,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(text = "Mã QG") },
@@ -336,7 +356,7 @@ fun LoginWithPhoneNumberScreen(
                     Text(text = exceptionMessage!!, Modifier.padding(10.dp))
                 }
             } else if (requestInProgress) {
-                var message by rememberSaveable() {
+                var message by rememberSaveable {
                     mutableStateOf("Chờ mã xác minh")
                 }
                 LaunchedEffect(key1 = phoneNumber) {
@@ -352,6 +372,20 @@ fun LoginWithPhoneNumberScreen(
 //                    Divider(Modifier.height(3.dp))
                     Text(text = message, textAlign = TextAlign.Center)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun PhoneNumberInput(content: @Composable () -> Unit) {
+    Layout(content = content) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints) }
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            var xPos = 0
+            placeables.forEach {
+                it.placeRelative(xPos, 0)
+                xPos += (it.width * 0.3).toInt()
             }
         }
     }
@@ -443,11 +477,11 @@ fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
         LoginWithPhoneNumberScreen(
             listOf(),
-            SelectedCountry.getDefaultInstance(),
+            Pair("", ""),
             {},
             "",
             {},
-            {},
+            { },
             false,
             null
         )
