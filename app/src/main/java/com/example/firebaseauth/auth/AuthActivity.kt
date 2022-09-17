@@ -1,6 +1,7 @@
 package com.example.firebaseauth.auth
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -20,6 +21,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -27,6 +29,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountriesAndDialCodes
@@ -115,6 +119,10 @@ fun AuthHomeScreen(
     fun hasUserLoggedIn() = authState.userSignedIn
 
     when {
+        authViewModel.connectionExceptionMessage.isNotEmpty() -> {
+            Text(text = authViewModel.connectionExceptionMessage)
+        }
+
         hasUserLoggedIn() -> {
             Column {
                 val user = Firebase.auth.currentUser
@@ -127,10 +135,6 @@ fun AuthHomeScreen(
 
         authViewModel.countriesAndDialCodes.isEmpty() || authViewModel.savedSelectedCountry.countryAndDialCode == null -> {
             Text("Khởi tạo")
-        }
-
-        authViewModel.connectionExceptionMessage.isNotEmpty() -> {
-            Text(text = authViewModel.connectionExceptionMessage)
         }
 
         else -> {
@@ -211,7 +215,6 @@ fun AuthHomeScreen(
             }
         }
     }
-
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -242,7 +245,7 @@ fun LoginWithPhoneNumberScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.requiredWidth(280.dp)
+//                modifier = Modifier.requiredWidth(280.dp)
             ) {
                 Image(painter = painterResource(id = R.drawable.ic_group_2), null)
 
@@ -289,42 +292,12 @@ fun LoginWithPhoneNumberScreen(
                     }
                 }
 
-//                Row {
-//                    OutlinedTextField(
-//                        value = selectedCountry.second,
-//                        onValueChange = {},
-//                        readOnly = true,
-//                        label = { Text(text = "Mã QG") },
-//                        modifier = Modifier
-//                            .weight(.3f)
-//                    )
-//                    OutlinedTextField(
-//                        value = phoneNumber,
-//                        onValueChange = onPhoneNumberChange,
-//                        singleLine = true,
-//                        label = {
-//                            Text(
-//                                text = "Nhập số điện thoại"
-//                            )
-//                        },
-//                        keyboardActions = KeyboardActions(onDone = onDone),
-//                        keyboardOptions = KeyboardOptions(
-//                            keyboardType = KeyboardType.Phone,
-//                            imeAction = ImeAction.Done
-//                        ),
-//                        modifier = Modifier
-//                            .weight(.7f)
-//                    )
-//                }
-
-                PhoneNumberInput {
+                PhoneNumberInputCombo {
                     OutlinedTextField(
                         value = selectedCountry.second,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(text = "Mã QG") },
-                        modifier = Modifier
-                            .weight(.3f)
                     )
                     OutlinedTextField(
                         value = phoneNumber,
@@ -340,8 +313,6 @@ fun LoginWithPhoneNumberScreen(
                             keyboardType = KeyboardType.Phone,
                             imeAction = ImeAction.Done
                         ),
-                        modifier = Modifier
-                            .weight(.7f)
                     )
                 }
             }
@@ -378,15 +349,36 @@ fun LoginWithPhoneNumberScreen(
 }
 
 @Composable
-fun PhoneNumberInput(content: @Composable () -> Unit) {
-    Layout(content = content) { measurables, constraints ->
-        val placeables = measurables.map { it.measure(constraints) }
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            var xPos = 0
-            placeables.forEach {
-                it.placeRelative(xPos, 0)
-                xPos += (it.width * 0.3).toInt()
-            }
+fun PhoneNumberInputCombo(content: @Composable () -> Unit) {
+    SubcomposeLayout { constraints ->
+        var measurables = subcompose(1, content)
+        var placeable1 = measurables[0].measure(constraints)
+        val size = IntSize(placeable1.width, placeable1.height)
+
+        measurables =
+            subcompose(2, content) // subcomposing the same content requires another slotId
+
+        placeable1 = measurables[0].measure(
+            Constraints(
+                minWidth = constraints.minWidth,
+                maxWidth = (size.width * .3).toInt(),
+                minHeight = constraints.minHeight,
+                maxHeight = constraints.maxHeight
+            )
+        )
+
+        val placeable2 = measurables[1].measure(
+            Constraints(
+                minWidth = constraints.minWidth,
+                maxWidth = (size.width * 0.7).toInt(),
+                minHeight = constraints.minHeight,
+                maxHeight = constraints.maxHeight
+            )
+        )
+
+        layout(size.width, size.height) {
+            placeable1.placeRelative(0, 0)
+            placeable2.placeRelative(placeable1.width, 0)
         }
     }
 }
