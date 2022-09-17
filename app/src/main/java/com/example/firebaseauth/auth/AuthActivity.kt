@@ -1,7 +1,6 @@
 package com.example.firebaseauth.auth
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -20,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountriesAndDialCodes
 import com.example.firebaseauth.R
+import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.PhoneAuthProvider
@@ -53,8 +52,7 @@ class AuthActivity : ComponentActivity() {
             FirebaseAuthTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
                 ) {
                     val authViewModel = viewModel<AuthViewModel>()
                     val callbacks = remember {
@@ -115,6 +113,8 @@ fun AuthHomeScreen(
     phoneAuth: PhoneAuth,
 ) {
     val authState by authViewModel.authStateFlow.collectAsState()
+    val savedSelectedCountryState =
+        authViewModel.flowOfSavedSelectedCountry.collectAsState(initial = SelectedCountry.getDefaultInstance())
 
     fun hasUserLoggedIn() = authState.userSignedIn
 
@@ -133,7 +133,7 @@ fun AuthHomeScreen(
             }
         }
 
-        authViewModel.countriesAndDialCodes.isEmpty() || authViewModel.savedSelectedCountry.countryAndDialCode == null -> {
+        authViewModel.countriesAndDialCodes.isEmpty() -> {
             Text("Khởi tạo")
         }
 
@@ -147,11 +147,20 @@ fun AuthHomeScreen(
                     var selectedCountry by rememberSaveable {
                         mutableStateOf(
                             Pair(
+                                savedSelectedCountryState.value.countryAndDialCode.name,
+                                savedSelectedCountryState.value.countryAndDialCode.dialCode,
+                            )
+                        )
+                    }
+
+                    /*var selectedCountry by rememberSaveable {
+                        mutableStateOf(
+                            Pair(
                                 authViewModel.savedSelectedCountry.countryAndDialCode.name,
                                 authViewModel.savedSelectedCountry.countryAndDialCode.dialCode
                             )
                         )
-                    }
+                    }*/
 
                     val kbController = LocalSoftwareKeyboardController.current
 
@@ -161,23 +170,19 @@ fun AuthHomeScreen(
                         onSelectedCountryChange = {
                             selectedCountry = Pair(it.name, it.dialCode)
                             authViewModel.saveSelectedCountry(it)
-                            if (hasException(authState.requestExceptionMessage))
-                                authViewModel.clearRequestExceptionMessage()
+                            if (hasException(authState.requestExceptionMessage)) authViewModel.clearRequestExceptionMessage()
                         },
                         phoneNumber = phoneNumber,
                         onPhoneNumberChange = {
-                            if (hasException(authState.requestExceptionMessage))
-                                authViewModel.clearRequestExceptionMessage()
+                            if (hasException(authState.requestExceptionMessage)) authViewModel.clearRequestExceptionMessage()
                             phoneNumber = it
                         },
                         onDone = {
-                            if (selectedCountry.second.isEmpty())
-                                authViewModel.onEmptyDialCode()
-                            else
-                                phoneAuth.startPhoneNumberVerification(
-                                    "${selectedCountry.second}${phoneNumber.trimStart { it == '0' }}",
-                                    authState.resendingToken
-                                )
+                            if (selectedCountry.second.isEmpty()) authViewModel.onEmptyDialCode()
+                            else phoneAuth.startPhoneNumberVerification(
+                                "${selectedCountry.second}${phoneNumber.trimStart { it == '0' }}",
+                                authState.resendingToken
+                            )
 //                kbController?.hide()
                         },
                         requestInProgress = authState.requestInProgress,
@@ -194,8 +199,7 @@ fun AuthHomeScreen(
                         codeToVerify = codeToVerify,
                         onCodeChange = {
                             if (it.length <= VERIFICATION_CODE_LENGTH) {
-                                if (hasException(authState.verificationExceptionMessage))
-                                    authViewModel.clearVerificationExceptionMessage()
+                                if (hasException(authState.verificationExceptionMessage)) authViewModel.clearVerificationExceptionMessage()
 
                                 if (it.last().code != 10) // Not key Enter
                                     codeToVerify = it
@@ -203,8 +207,7 @@ fun AuthHomeScreen(
 
                             if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
                                 phoneAuth.onReceiveCodeToVerify(
-                                    authState.verificationId,
-                                    codeToVerify
+                                    authState.verificationId, codeToVerify
                                 )
                             }
                         },
@@ -230,9 +233,7 @@ fun LoginWithPhoneNumberScreen(
     exceptionMessage: String?,
 ) {
     Surface(
-        color = MaterialTheme.colors.background,
-        modifier = Modifier
-            .fillMaxWidth()
+        color = MaterialTheme.colors.background, modifier = Modifier.fillMaxWidth()
     ) {
         var expanded by rememberSaveable {
             mutableStateOf(false)
@@ -245,7 +246,6 @@ fun LoginWithPhoneNumberScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-//                modifier = Modifier.requiredWidth(280.dp)
             ) {
                 Image(painter = painterResource(id = R.drawable.ic_group_2), null)
 
@@ -267,8 +267,7 @@ fun LoginWithPhoneNumberScreen(
                     )
                     val filter = countriesAndDialCodes.filter {
                         it.name.contains(
-                            selectedCountryName,
-                            ignoreCase = true
+                            selectedCountryName, ignoreCase = true
                         )
                     }
                     if (filter.isNotEmpty()) {
@@ -310,8 +309,7 @@ fun LoginWithPhoneNumberScreen(
                         },
                         keyboardActions = KeyboardActions(onDone = onDone),
                         keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Phone,
-                            imeAction = ImeAction.Done
+                            keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
                         ),
                     )
                 }
@@ -398,28 +396,24 @@ fun VerifyCodeScreen(
     Column(
         modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = Alignment.CenterHorizontally
-    )
-    {
+    ) {
         Text(
             "Mã xác thực 6 số đã được gửi qua SMS.",
             modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
         )
-        TextField(
-            value = codeToVerify,
+        TextField(value = codeToVerify,
             onValueChange = onCodeChange,
             textStyle = TextStyle(textAlign = TextAlign.Center),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.None
+                keyboardType = KeyboardType.Number, imeAction = ImeAction.None
             ),
             label = {
                 Text(
                     text = "Nhập mã xác thực",
 //                    style = TextStyle(textAlign = TextAlign.Center)
                 )
-            }
-        )
+            })
         Spacer(modifier = Modifier.height(10.dp))
         Divider(
             Modifier
@@ -467,15 +461,7 @@ fun VerifyCodeScreen(
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
-        LoginWithPhoneNumberScreen(
-            listOf(),
-            Pair("", ""),
-            {},
-            "",
-            {},
-            { },
-            false,
-            null
+        LoginWithPhoneNumberScreen(listOf(), Pair("", ""), {}, "", {}, { }, false, null
         )
     }
 }

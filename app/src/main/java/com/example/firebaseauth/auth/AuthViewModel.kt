@@ -7,7 +7,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebaseauth.CountriesAndDialCodes
-import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.data.CountriesAndDialCodesRepository
 import com.example.firebaseauth.data.SavedSelectedCountryRepository
 import com.google.firebase.auth.PhoneAuthProvider
@@ -34,8 +33,7 @@ class AuthViewModel @Inject constructor(
 
     val countriesAndDialCodes get() = _countriesAndDialCodes
 
-    private var _savedSelectedCountry by mutableStateOf(SelectedCountry.getDefaultInstance())
-    val savedSelectedCountry: SelectedCountry get() = _savedSelectedCountry
+    val flowOfSavedSelectedCountry get() = savedSelectedCountryRepository.getFlowOfSelectedCountry()
 
     private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage
@@ -45,15 +43,6 @@ class AuthViewModel @Inject constructor(
             val r = countriesAndDialCodesRepository.getCountriesAndDialCodes()
             if (r.isSuccess) {
                 _countriesAndDialCodes = r.getOrNull()?.dataList!!
-            } else r.onFailure {
-                _connectionExceptionMessage = it.message!!
-            }
-        }
-
-        viewModelScope.launch {
-            val r = savedSelectedCountryRepository.getSelectedCountry()
-            if (r.isSuccess) {
-                _savedSelectedCountry = r.getOrNull()
             } else r.onFailure {
                 _connectionExceptionMessage = it.message!!
             }
