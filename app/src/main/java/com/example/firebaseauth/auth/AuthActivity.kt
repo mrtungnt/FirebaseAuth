@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.firebaseauth.CountriesAndDialCodes
+import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.R
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
@@ -84,9 +84,9 @@ class AuthActivity : ComponentActivity() {
                                 authViewModel.onRequestInProgress(inProgress)
                             }
 
-                            /* override fun onLoggingProgress(progress: Boolean) {
-                                 TODO("Not yet implemented")
-                             }*/
+                            /*override fun onLoggingProgress(progress: Boolean) {
+                                TODO("Not yet implemented")
+                            }*/
                         }
                     }
 
@@ -113,8 +113,7 @@ fun AuthHomeScreen(
     phoneAuth: PhoneAuth,
 ) {
     val authState by authViewModel.authStateFlow.collectAsState()
-    val savedSelectedCountryState =
-        authViewModel.flowOfSavedSelectedCountry.collectAsState(initial = SelectedCountry.getDefaultInstance())
+    val savedSelectedCountryState by authViewModel.flowOfSavedSelectedCountry.collectAsState(initial = SelectedCountry.getDefaultInstance())
 
     fun hasUserLoggedIn() = authState.userSignedIn
 
@@ -144,31 +143,12 @@ fun AuthHomeScreen(
                         mutableStateOf("")
                     }
 
-                    var selectedCountry by rememberSaveable {
-                        mutableStateOf(
-                            Pair(
-                                savedSelectedCountryState.value.countryAndDialCode.name,
-                                savedSelectedCountryState.value.countryAndDialCode.dialCode,
-                            )
-                        )
-                    }
-
-                    /*var selectedCountry by rememberSaveable {
-                        mutableStateOf(
-                            Pair(
-                                authViewModel.savedSelectedCountry.countryAndDialCode.name,
-                                authViewModel.savedSelectedCountry.countryAndDialCode.dialCode
-                            )
-                        )
-                    }*/
-
                     val kbController = LocalSoftwareKeyboardController.current
 
                     LoginWithPhoneNumberScreen(
-                        countriesAndDialCodes = authViewModel.countriesAndDialCodes,
-                        selectedCountry = selectedCountry,
+                        countryNamesAndDialCodes = authViewModel.countriesAndDialCodes,
+                        selectedCountry = savedSelectedCountryState,
                         onSelectedCountryChange = {
-                            selectedCountry = Pair(it.name, it.dialCode)
                             authViewModel.saveSelectedCountry(it)
                             if (hasException(authState.requestExceptionMessage)) authViewModel.clearRequestExceptionMessage()
                         },
@@ -178,9 +158,9 @@ fun AuthHomeScreen(
                             phoneNumber = it
                         },
                         onDone = {
-                            if (selectedCountry.second.isEmpty()) authViewModel.onEmptyDialCode()
+                            if (savedSelectedCountryState.nameAndDialCode.dialCode.isEmpty()) authViewModel.onEmptyDialCode()
                             else phoneAuth.startPhoneNumberVerification(
-                                "${selectedCountry.second}${phoneNumber.trimStart { it == '0' }}",
+                                "${savedSelectedCountryState.nameAndDialCode.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authState.resendingToken
                             )
 //                kbController?.hide()
@@ -223,9 +203,9 @@ fun AuthHomeScreen(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LoginWithPhoneNumberScreen(
-    countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode>,
-    selectedCountry: Pair<String, String>,
-    onSelectedCountryChange: (CountriesAndDialCodes.CountryAndDialCode) -> Unit,
+    countryNamesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode>,
+    selectedCountry: SelectedCountry,
+    onSelectedCountryChange: (CountryNamesAndDialCodes.NameAndDialCode) -> Unit,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: KeyboardActionScope.() -> Unit,
@@ -239,8 +219,8 @@ fun LoginWithPhoneNumberScreen(
             mutableStateOf(false)
         }
 
-        var selectedCountryName by remember {
-            mutableStateOf(selectedCountry.first)
+        var selectedCountryName by rememberSaveable {
+            mutableStateOf(selectedCountry.nameAndDialCode.name)
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -265,7 +245,7 @@ fun LoginWithPhoneNumberScreen(
                         colors = ExposedDropdownMenuDefaults.textFieldColors(),
                         singleLine = true,
                     )
-                    val filter = countriesAndDialCodes.filter {
+                    val filter = countryNamesAndDialCodes.filter {
                         it.name.contains(
                             selectedCountryName, ignoreCase = true
                         )
@@ -293,7 +273,7 @@ fun LoginWithPhoneNumberScreen(
 
                 PhoneNumberInputCombo {
                     OutlinedTextField(
-                        value = selectedCountry.second,
+                        value = selectedCountry.nameAndDialCode.dialCode,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(text = "Mã QG") },
@@ -316,11 +296,13 @@ fun LoginWithPhoneNumberScreen(
             }
 
             if (hasException(exceptionMessage)) {
-                Box(
-                    Modifier
+                Surface(
+                    modifier = Modifier
                         .padding(10.dp)
-                        .border(BorderStroke(3.dp, Color.Blue))
-                        .wrapContentSize()
+                        .wrapContentSize(),
+                    color = MaterialTheme.colors.surface,
+                    contentColor = MaterialTheme.colors.error,
+//                    elevation = 1.dp
                 ) {
                     Text(text = exceptionMessage!!, Modifier.padding(10.dp))
                 }
@@ -346,6 +328,14 @@ fun LoginWithPhoneNumberScreen(
     }
 }
 
+fun ConstraintsWithNewMaxWidth(constraints: Constraints, newMaxWith: Int): Constraints =
+    Constraints(
+        minWidth = constraints.minWidth,
+        maxWidth = newMaxWith,
+        minHeight = constraints.minHeight,
+        maxHeight = constraints.maxHeight
+    )
+
 @Composable
 fun PhoneNumberInputCombo(content: @Composable () -> Unit) {
     SubcomposeLayout { constraints ->
@@ -357,21 +347,11 @@ fun PhoneNumberInputCombo(content: @Composable () -> Unit) {
             subcompose(2, content) // subcomposing the same content requires another slotId
 
         placeable1 = measurables[0].measure(
-            Constraints(
-                minWidth = constraints.minWidth,
-                maxWidth = (size.width * .3).toInt(),
-                minHeight = constraints.minHeight,
-                maxHeight = constraints.maxHeight
-            )
+            ConstraintsWithNewMaxWidth(constraints, (size.width * .3).toInt())
         )
 
         val placeable2 = measurables[1].measure(
-            Constraints(
-                minWidth = constraints.minWidth,
-                maxWidth = (size.width * 0.7).toInt(),
-                minHeight = constraints.minHeight,
-                maxHeight = constraints.maxHeight
-            )
+            ConstraintsWithNewMaxWidth(constraints, (size.width * .7).toInt())
         )
 
         layout(size.width, size.height) {
@@ -424,15 +404,15 @@ fun VerifyCodeScreen(
         Spacer(
             modifier = Modifier.height(5.dp)
         )
-        /* Column(
-             modifier = modifier
-                 .width(IntrinsicSize.Max),
-             horizontalAlignment = Alignment.CenterHorizontally
-         ) {
-             Button(onClick = {  }, Modifier.fillMaxWidth()) {
+        Column(
+            modifier = modifier
+                .width(IntrinsicSize.Max),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(onClick = { }, Modifier.fillMaxWidth()) {
                 Text(text = "Xác thực bằng số điện thoại khác")
             }
-        }*/
+        }
         if (hasException(exceptionMessage)) {
             Box(
                 Modifier
@@ -461,7 +441,15 @@ fun VerifyCodeScreen(
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
-        LoginWithPhoneNumberScreen(listOf(), Pair("", ""), {}, "", {}, { }, false, null
+        LoginWithPhoneNumberScreen(
+            listOf(),
+            SelectedCountry.getDefaultInstance(),
+            {},
+            "",
+            {},
+            { },
+            false,
+            null
         )
     }
 }

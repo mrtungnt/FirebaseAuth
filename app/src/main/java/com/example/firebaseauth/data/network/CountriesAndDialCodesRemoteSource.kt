@@ -1,6 +1,5 @@
 package com.example.firebaseauth.data.network
 
-import com.example.firebaseauth.CountriesAndDialCodesModelLocal
 import io.ktor.client.*
 import io.ktor.client.engine.android.*
 import io.ktor.client.request.*

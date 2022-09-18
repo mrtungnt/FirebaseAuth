@@ -6,8 +6,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.firebaseauth.CountriesAndDialCodes
-import com.example.firebaseauth.data.CountriesAndDialCodesRepository
+import com.example.firebaseauth.CountryNamesAndDialCodes
+import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
 import com.example.firebaseauth.data.SavedSelectedCountryRepository
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val countriesAndDialCodesRepository: CountriesAndDialCodesRepository,
+    private val countryNamesAndDialCodesRepository: CountryNamesAndDialCodesRepository,
     private val savedSelectedCountryRepository: SavedSelectedCountryRepository,
     private val authState: AuthUIState,
     private val state: SavedStateHandle
@@ -27,10 +27,9 @@ class AuthViewModel @Inject constructor(
     private val stateKeyName = "savedUIState"
     val authStateFlow = state.getStateFlow(stateKeyName, authState)
 
-    private var _countriesAndDialCodes: List<CountriesAndDialCodes.CountryAndDialCode> by mutableStateOf(
+    private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode> by mutableStateOf(
         emptyList()
     )
-
     val countriesAndDialCodes get() = _countriesAndDialCodes
 
     val flowOfSavedSelectedCountry get() = savedSelectedCountryRepository.getFlowOfSelectedCountry()
@@ -40,9 +39,9 @@ class AuthViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val r = countriesAndDialCodesRepository.getCountriesAndDialCodes()
+            val r = countryNamesAndDialCodesRepository.getCountriesAndDialCodes()
             if (r.isSuccess) {
-                _countriesAndDialCodes = r.getOrNull()?.dataList!!
+                _countriesAndDialCodes = r.getOrNull()?.namesAndDialCodesList!!
             } else r.onFailure {
                 _connectionExceptionMessage = it.message!!
             }
@@ -114,7 +113,7 @@ class AuthViewModel @Inject constructor(
         )
     }
 
-    fun saveSelectedCountry(selectedCountry: CountriesAndDialCodes.CountryAndDialCode) {
+    fun saveSelectedCountry(selectedCountry: CountryNamesAndDialCodes.NameAndDialCode) {
         viewModelScope.launch {
             savedSelectedCountryRepository.saveSelectedCountry(selectedCountry)
         }

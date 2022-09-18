@@ -3,11 +3,11 @@ syntax = "proto3";
 option java_package = "com.example.firebaseauth";
 option java_multiple_files = true;
 
-message CountriesAndDialCodes{
-  message CountryAndDialCode{
+message CountryNamesAndDialCodes{
+  message NameAndDialCode{
     string name = 1;
     string dial_code = 2;
   }
-  repeated CountryAndDialCode data = 1;
+  repeated NameAndDialCode names_and_dial_codes = 1;
 }
 

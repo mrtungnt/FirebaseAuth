@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
-import com.example.firebaseauth.CountriesAndDialCodes
+import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthUIState
-import com.example.firebaseauth.data.CountriesAndDialCodesSerializer
+import com.example.firebaseauth.data.CountryNamesAndDialCodesSerializer
 import com.example.firebaseauth.data.SelectedCountrySerializer
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
@@ -43,8 +43,8 @@ object Modules {
     @CountriesAndDialCodesDataStore
     @Singleton
     @Provides
-    fun providesCountriesAndDialCodesDataStore(@ApplicationContext context: Context): DataStore<CountriesAndDialCodes> =
-        DataStoreFactory.create(serializer = CountriesAndDialCodesSerializer, produceFile = {
+    fun providesCountriesAndDialCodesDataStore(@ApplicationContext context: Context): DataStore<CountryNamesAndDialCodes> =
+        DataStoreFactory.create(serializer = CountryNamesAndDialCodesSerializer, produceFile = {
             context.dataStoreFile(
                 COUNTRIES_AND_DIAL_CODES_FILE_NAME
             )

@@ -1,29 +1,29 @@
 package com.example.firebaseauth.data
 
-import com.example.firebaseauth.CountriesAndDialCodes
-import com.example.firebaseauth.data.local.CountriesAndDialCodesLocalSource
+import com.example.firebaseauth.CountryNamesAndDialCodes
+import com.example.firebaseauth.data.local.CountryNamesAndDialCodesLocalSource
 import com.example.firebaseauth.data.network.CountriesAndDialCodesRemoteSource
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 
-class CountriesAndDialCodesRepository @Inject constructor(
+class CountryNamesAndDialCodesRepository @Inject constructor(
     private val remoteSource: CountriesAndDialCodesRemoteSource,
-    private val localSource: CountriesAndDialCodesLocalSource
+    private val localSource: CountryNamesAndDialCodesLocalSource
 ) {
-    suspend fun getCountriesAndDialCodes(): Result<CountriesAndDialCodes> {
+    suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes> {
         return when {
-            localSource.getData().first().dataCount > 0 -> Result.success(
+            localSource.getData().first().namesAndDialCodesCount > 0 -> Result.success(
                 localSource.getData().first()
             )
             else -> {
                 val r = remoteSource.getCountriesAndDialCodes()
                 if (r.isSuccess) {
-                    val c: MutableCollection<CountriesAndDialCodes.CountryAndDialCode> =
+                    val c: MutableCollection<CountryNamesAndDialCodes.NameAndDialCode> =
                         mutableListOf()
                     r.getOrNull()?.data?.forEach {
                         c.add(
-                            CountriesAndDialCodes.CountryAndDialCode.newBuilder().setName(it.name)
+                            CountryNamesAndDialCodes.NameAndDialCode.newBuilder().setName(it.name)
                                 .setDialCode(it.dial_code).build()
                         )
                     }
