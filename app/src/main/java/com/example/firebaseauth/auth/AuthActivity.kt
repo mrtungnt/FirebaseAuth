@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -232,6 +233,10 @@ fun LoginWithPhoneNumberScreen(
                 ForkedExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.onFocusChanged {
+                        if (!it.isFocused) if (selectedCountryName != selectedCountry.nameAndDialCode.name) selectedCountryName =
+                            selectedCountry.nameAndDialCode.name
+                    }
                 ) {
                     TextField(
                         value = selectedCountryName,
@@ -304,7 +309,11 @@ fun LoginWithPhoneNumberScreen(
                     contentColor = MaterialTheme.colors.error,
 //                    elevation = 1.dp
                 ) {
-                    Text(text = exceptionMessage!!, Modifier.padding(10.dp))
+                    Text(
+                        text = exceptionMessage!!,
+                        Modifier.padding(10.dp),
+                        textAlign = TextAlign.Justify
+                    )
                 }
             } else if (requestInProgress) {
                 var message by rememberSaveable {
