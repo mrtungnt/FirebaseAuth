@@ -1,6 +1,9 @@
 package com.example.firebaseauth.auth
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -21,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -31,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.R
@@ -42,9 +47,32 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import androidx.activity.result.contract.ActivityResultContracts
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
+    val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        when {
+            permissions.getOrDefault(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                false
+            ) -> {
+                // Precise location access granted.
+            }
+            permissions.getOrDefault(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                false
+            ) -> {
+                // Only approximate location access granted.
+            }
+            else -> {
+                // No location access granted.
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
@@ -275,6 +303,24 @@ fun LoginWithPhoneNumberScreen(
                         }
                     }
                 }
+                val context = LocalContext.current.applicationContext
+                Button(onClick = {
+                    val permissionCheck = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                    when (permissionCheck) {
+                        PackageManager.PERMISSION_GRANTED -> Log.d(
+                            "ACCESS_COARSE_LOCATION",
+                            "Granted: yes $permissionCheck"
+                        )
+                        PackageManager.PERMISSION_DENIED -> Log.d(
+                            "ACCESS_COARSE_LOCATION",
+                            "Granted: no $permissionCheck"
+                        )
+                    }
+
+                }) { Text(text = "Auto") }
 
                 PhoneNumberInputCombo {
                     OutlinedTextField(
