@@ -21,7 +21,7 @@ import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Qualifier
-annotation class CountriesAndDialCodesDataStore
+annotation class CountryNamesAndDialCodesDataStore
 
 @Qualifier
 annotation class SelectedCountryDataStore
@@ -40,13 +40,13 @@ object Modules {
         verificationInProgress = false,
     )
 
-    @CountriesAndDialCodesDataStore
+    @CountryNamesAndDialCodesDataStore
     @Singleton
     @Provides
-    fun providesCountriesAndDialCodesDataStore(@ApplicationContext context: Context): DataStore<CountryNamesAndDialCodes> =
+    fun providesCountryNamesAndDialCodesDataStore(@ApplicationContext context: Context): DataStore<CountryNamesAndDialCodes> =
         DataStoreFactory.create(serializer = CountryNamesAndDialCodesSerializer, produceFile = {
             context.dataStoreFile(
-                COUNTRIES_AND_DIAL_CODES_FILE_NAME
+                COUNTRY_NAMES_AND_DIAL_CODES_FILE_NAME
             )
         })
 
@@ -61,5 +61,5 @@ object Modules {
         })
 }
 
-const val COUNTRIES_AND_DIAL_CODES_FILE_NAME = "countries_and_dial_codes.pb"
+const val COUNTRY_NAMES_AND_DIAL_CODES_FILE_NAME = "country_names_and_dial_codes.pb"
 const val SELECTED_COUNTRY_FILE_NAME = "selected_country.pb"

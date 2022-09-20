@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -35,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountryNamesAndDialCodes
@@ -47,7 +50,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import androidx.activity.result.contract.ActivityResultContracts
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -128,6 +130,7 @@ class AuthActivity : ComponentActivity() {
                     AuthHomeScreen(
                         authViewModel,
                         phoneAuth,
+                        this@AuthActivity,
                     )
                 }
             }
@@ -140,6 +143,7 @@ class AuthActivity : ComponentActivity() {
 fun AuthHomeScreen(
     authViewModel: AuthViewModel,
     phoneAuth: PhoneAuth,
+    targetActivity: AuthActivity
 ) {
     val authState by authViewModel.authStateFlow.collectAsState()
     val savedSelectedCountryState by authViewModel.flowOfSavedSelectedCountry.collectAsState(initial = SelectedCountry.getDefaultInstance())
@@ -174,6 +178,42 @@ fun AuthHomeScreen(
 
                     val kbController = LocalSoftwareKeyboardController.current
 
+                    val context = LocalContext.current.applicationContext
+                    val locationPermissionRequest: () -> Unit = {
+                        val permissionCheck = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                        when {
+                            permissionCheck ==
+                                    PackageManager.PERMISSION_GRANTED -> Log.d(
+                                "ACCESS_COARSE_LOCATION",
+                                "Granted: yes $permissionCheck"
+                            )
+
+                            shouldShowRequestPermissionRationale(
+                                targetActivity,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) -> {
+                                Log.d(
+                                    "ACCESS_COARSE_LOCATION",
+                                    "ShouldShowRequestPermissionRationale: yes"
+                                )
+
+                                Toast.makeText(context, "ACCESS_COARSE_LOCATION needed", 100)
+                            }
+
+                            else -> {
+                                targetActivity.locationPermissionRequest.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        }
+                    }
+
                     LoginWithPhoneNumberScreen(
                         countryNamesAndDialCodes = authViewModel.countriesAndDialCodes,
                         selectedCountry = savedSelectedCountryState,
@@ -196,6 +236,7 @@ fun AuthHomeScreen(
                         },
                         requestInProgress = authState.requestInProgress,
                         exceptionMessage = authState.requestExceptionMessage,
+                        locationPermissionRequest = locationPermissionRequest
                     )
                 }
 
@@ -227,6 +268,8 @@ fun AuthHomeScreen(
             }
         }
     }
+
+
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -240,6 +283,7 @@ fun LoginWithPhoneNumberScreen(
     onDone: KeyboardActionScope.() -> Unit,
     requestInProgress: Boolean,
     exceptionMessage: String?,
+    locationPermissionRequest: () -> Unit
 ) {
     Surface(
         color = MaterialTheme.colors.background, modifier = Modifier.fillMaxWidth()
@@ -255,8 +299,11 @@ fun LoginWithPhoneNumberScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.width(280.dp)
             ) {
                 Image(painter = painterResource(id = R.drawable.ic_group_2), null)
+
+                Button(onClick = locationPermissionRequest) { Text(text = "Tự động xác định ") }
 
                 ForkedExposedDropdownMenuBox(
                     expanded = expanded,
@@ -303,24 +350,6 @@ fun LoginWithPhoneNumberScreen(
                         }
                     }
                 }
-                val context = LocalContext.current.applicationContext
-                Button(onClick = {
-                    val permissionCheck = ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                    when (permissionCheck) {
-                        PackageManager.PERMISSION_GRANTED -> Log.d(
-                            "ACCESS_COARSE_LOCATION",
-                            "Granted: yes $permissionCheck"
-                        )
-                        PackageManager.PERMISSION_DENIED -> Log.d(
-                            "ACCESS_COARSE_LOCATION",
-                            "Granted: no $permissionCheck"
-                        )
-                    }
-
-                }) { Text(text = "Auto") }
 
                 PhoneNumberInputCombo {
                     OutlinedTextField(
@@ -353,12 +382,11 @@ fun LoginWithPhoneNumberScreen(
                         .wrapContentSize(),
                     color = MaterialTheme.colors.surface,
                     contentColor = MaterialTheme.colors.error,
-//                    elevation = 1.dp
+                    elevation = 2.dp
                 ) {
                     Text(
                         text = exceptionMessage!!,
                         Modifier.padding(10.dp),
-                        textAlign = TextAlign.Justify
                     )
                 }
             } else if (requestInProgress) {
@@ -492,7 +520,7 @@ fun VerifyCodeScreen(
 }
 
 
-@Preview(showBackground = true)
+/*@Preview(showBackground = true)
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
@@ -507,7 +535,7 @@ fun LoginWithPasswordScreenPreview() {
             null
         )
     }
-}
+}*/
 
 @Preview(showBackground = true)
 @Composable
