@@ -303,8 +303,6 @@ fun LoginWithPhoneNumberScreen(
             ) {
                 Image(painter = painterResource(id = R.drawable.ic_group_2), null)
 
-                Button(onClick = locationPermissionRequest) { Text(text = "Tự động xác định ") }
-
                 ForkedExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded },
@@ -351,12 +349,14 @@ fun LoginWithPhoneNumberScreen(
                     }
                 }
 
+                Button(onClick = locationPermissionRequest) { Text(text = "Tự động xác định quốc gia từ vị trí") }
+
                 PhoneNumberInputCombo {
                     OutlinedTextField(
                         value = selectedCountry.nameAndDialCode.dialCode,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(text = "Mã QG") },
+                        label = { Text(text = "Dial code") },
                     )
                     OutlinedTextField(
                         value = phoneNumber,
@@ -364,7 +364,7 @@ fun LoginWithPhoneNumberScreen(
                         singleLine = true,
                         label = {
                             Text(
-                                text = "Nhập số điện thoại"
+                                text = "Số điện thoại"
                             )
                         },
                         keyboardActions = KeyboardActions(onDone = onDone),
@@ -373,6 +373,9 @@ fun LoginWithPhoneNumberScreen(
                         ),
                     )
                 }
+
+                Button(onClick = { }, modifier = Modifier.fillMaxWidth()) { Text(text = "OK") }
+
             }
 
             if (hasException(exceptionMessage)) {
@@ -430,11 +433,11 @@ fun PhoneNumberInputCombo(content: @Composable () -> Unit) {
             subcompose(2, content) // subcomposing the same content requires another slotId
 
         placeable1 = measurables[0].measure(
-            ConstraintsWithNewMaxWidth(constraints, (size.width * .3).toInt())
+            ConstraintsWithNewMaxWidth(constraints, (size.width * .4).toInt())
         )
 
         val placeable2 = measurables[1].measure(
-            ConstraintsWithNewMaxWidth(constraints, (size.width * .7).toInt())
+            ConstraintsWithNewMaxWidth(constraints, (size.width * .6).toInt())
         )
 
         layout(size.width, size.height) {
