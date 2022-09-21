@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -25,8 +26,9 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -35,7 +37,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
@@ -45,6 +46,8 @@ import com.example.firebaseauth.R
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -53,6 +56,7 @@ import kotlinx.coroutines.delay
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
+    val viewModel = viewModels<AuthViewModel>()
     val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -62,22 +66,30 @@ class AuthActivity : ComponentActivity() {
                 false
             ) -> {
                 // Precise location access granted.
+                Log.d("ACCESS_FINE_LOCATION", "Granted: as requested")
+
             }
             permissions.getOrDefault(
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 false
             ) -> {
                 // Only approximate location access granted.
+                Log.d("ACCESS_COARSE_LOCATION", "Granted: as requested")
             }
             else -> {
                 // No location access granted.
+                Log.d("ACCESS_LOCATION", "Granted: NONE")
             }
         }
     }
 
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         setContent {
             FirebaseAuthTheme {
@@ -86,6 +98,10 @@ class AuthActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
                 ) {
                     val authViewModel = viewModel<AuthViewModel>()
+                    Log.d(
+                        "authViewModel",
+                        "Singleton: ${authViewModel === this@AuthActivity.viewModel.value}"
+                    )
                     val callbacks = remember {
                         object : CallbacksFromPhoneAuthToHost() {
                             override fun onCodeSent(
@@ -296,10 +312,11 @@ fun LoginWithPhoneNumberScreen(
             mutableStateOf(selectedCountry.nameAndDialCode.name)
         }
 
+        val horizontalCenterColumnWidth = 280.dp
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(280.dp)
+                modifier = Modifier.width(horizontalCenterColumnWidth)
             ) {
                 Image(painter = painterResource(id = R.drawable.ic_group_2), null)
 
@@ -351,14 +368,20 @@ fun LoginWithPhoneNumberScreen(
 
                 Button(onClick = locationPermissionRequest) { Text(text = "Tự động xác định quốc gia từ vị trí") }
 
-                PhoneNumberInputCombo {
+                Row {
                     OutlinedTextField(
+                        modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
+                            (horizontalCenterColumnWidth.toPx() * .4).toInt()
+                        }),
                         value = selectedCountry.nameAndDialCode.dialCode,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(text = "Dial code") },
                     )
                     OutlinedTextField(
+                        modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
+                            (horizontalCenterColumnWidth.toPx() * .6).toInt()
+                        }),
                         value = phoneNumber,
                         onValueChange = onPhoneNumberChange,
                         singleLine = true,
@@ -414,7 +437,7 @@ fun LoginWithPhoneNumberScreen(
     }
 }
 
-fun ConstraintsWithNewMaxWidth(constraints: Constraints, newMaxWith: Int): Constraints =
+fun constraintsWithNewMaxWidth(constraints: Constraints, newMaxWith: Int): Constraints =
     Constraints(
         minWidth = constraints.minWidth,
         maxWidth = newMaxWith,
@@ -422,6 +445,18 @@ fun ConstraintsWithNewMaxWidth(constraints: Constraints, newMaxWith: Int): Const
         maxHeight = constraints.maxHeight
     )
 
+
+fun Modifier.layoutWithNewMaxWidth(newMaxWith: Int): Modifier = layout { measurable, constraints ->
+    val component = measurable.measure(
+        constraintsWithNewMaxWidth(constraints, newMaxWith)
+    )
+    layout(
+        component.width,
+        component.height
+    ) { component.placeRelative(0, 0) }
+}
+
+/*
 @Composable
 fun PhoneNumberInputCombo(content: @Composable () -> Unit) {
     SubcomposeLayout { constraints ->
@@ -446,6 +481,7 @@ fun PhoneNumberInputCombo(content: @Composable () -> Unit) {
         }
     }
 }
+*/
 
 fun hasException(message: String?) = !message.isNullOrEmpty()
 
