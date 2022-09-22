@@ -61,8 +61,7 @@ class AuthActivity : ComponentActivity() {
     ) { permissions ->
         when {
             permissions.getOrDefault(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                false
+                Manifest.permission.ACCESS_FINE_LOCATION, false
             ) -> {
                 // Precise location access granted.
                 Log.d("ACCESS_FINE_LOCATION", "Granted: as requested")
@@ -70,8 +69,7 @@ class AuthActivity : ComponentActivity() {
             }
 
             permissions.getOrDefault(
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                false
+                Manifest.permission.ACCESS_COARSE_LOCATION, false
             ) -> {
                 // Only approximate location access granted.
                 Log.d("ACCESS_COARSE_LOCATION", "Granted: as requested")
@@ -87,26 +85,21 @@ class AuthActivity : ComponentActivity() {
 
     fun handleLocationPermissionRequest() {
         val permissionCheck = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.ACCESS_COARSE_LOCATION
+            applicationContext, Manifest.permission.ACCESS_COARSE_LOCATION
         )
         when {
-            permissionCheck ==
-                    PackageManager.PERMISSION_GRANTED -> {
+            permissionCheck == PackageManager.PERMISSION_GRANTED -> {
                 Log.d(
-                    "ACCESS_COARSE_LOCATION",
-                    "Granted: yes $permissionCheck"
+                    "ACCESS_COARSE_LOCATION", "Granted: yes $permissionCheck"
                 )
                 whenLocationPermissionGranted()
             }
 
             shouldShowRequestPermissionRationale(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
+                this, Manifest.permission.ACCESS_COARSE_LOCATION
             ) -> {
                 Log.d(
-                    "ACCESS_COARSE_LOCATION",
-                    "ShouldShowRequestPermissionRationale: yes"
+                    "ACCESS_COARSE_LOCATION", "ShouldShowRequestPermissionRationale: yes"
                 )
 
                 Toast.makeText(applicationContext, "ACCESS_COARSE_LOCATION needed", 1000)
@@ -127,9 +120,7 @@ class AuthActivity : ComponentActivity() {
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
             .addOnSuccessListener { location ->
                 if (location == null) Toast.makeText(
-                    applicationContext,
-                    "Location not available",
-                    100
+                    applicationContext, "Location not available", 100
                 ) else {
                     Log.d(
                         "Location",
@@ -138,9 +129,7 @@ class AuthActivity : ComponentActivity() {
                 }
             }.addOnFailureListener { exc ->
                 Toast.makeText(
-                    applicationContext,
-                    exc.message,
-                    100
+                    applicationContext, exc.message, 100
                 )
             }
     }
@@ -274,7 +263,7 @@ fun AuthHomeScreen(
                                 "${savedSelectedCountryState.nameAndDialCode.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authState.resendingToken
                             )
-//                kbController?.hide()
+                            kbController?.hide()
                         },
                         requestInProgress = authState.requestInProgress,
                         exceptionMessage = authState.requestExceptionMessage,
@@ -320,7 +309,7 @@ fun LoginWithPhoneNumberScreen(
     onSelectedCountryChange: (CountryNamesAndDialCodes.NameAndDialCode) -> Unit,
     phoneNumber: String,
     onPhoneNumberChange: (String) -> Unit,
-    onDone: KeyboardActionScope.() -> Unit,
+    onDone: () -> Unit,
     requestInProgress: Boolean,
     exceptionMessage: String?,
     handleLocationPermissionRequest: () -> Unit
@@ -342,14 +331,13 @@ fun LoginWithPhoneNumberScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(horizontalCenterColumnWidth)
             ) {
-                Image(
+                /*Image(
                     painter = painterResource(id = R.drawable.logo),
                     null,
                     modifier = Modifier.padding(top = 50.dp)
-                )
+                )*/
 
-                ForkedExposedDropdownMenuBox(
-                    expanded = expanded,
+                ForkedExposedDropdownMenuBox(expanded = expanded,
                     onExpandedChange = { expanded = !expanded },
                     modifier = Modifier
                         .onFocusChanged {
@@ -402,7 +390,7 @@ fun LoginWithPhoneNumberScreen(
                     onClick = handleLocationPermissionRequest
                 ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
 
-                Row(modifier = Modifier.padding(top = 10.dp)) {
+                Row(modifier = Modifier.padding(top = 8.dp)) {
                     OutlinedTextField(
                         modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
                             (horizontalCenterColumnWidth.toPx() * .4).toInt()
@@ -424,20 +412,12 @@ fun LoginWithPhoneNumberScreen(
                                 text = "Số điện thoại"
                             )
                         },
-                        keyboardActions = KeyboardActions(onDone = onDone),
+                        keyboardActions = KeyboardActions(onDone = { onDone() }),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
                         ),
                     )
                 }
-
-                Button(
-                    onClick = { },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 30.dp)
-                ) { Text(text = "OK") }
-
             }
 
             if (hasException(exceptionMessage)) {
@@ -471,6 +451,13 @@ fun LoginWithPhoneNumberScreen(
 //                    Divider(Modifier.height(3.dp))
                     Text(text = message, textAlign = TextAlign.Center)
                 }
+            } else {
+                Button(
+                    onClick = onDone,
+                    modifier = Modifier
+                        .width(horizontalCenterColumnWidth)
+                        .padding(top = 30.dp)
+                ) { Text(text = "Xong") }
             }
         }
     }
@@ -490,8 +477,7 @@ fun Modifier.layoutWithNewMaxWidth(newMaxWith: Int): Modifier = layout { measura
         constraintsWithNewMaxWidth(constraints, newMaxWith)
     )
     layout(
-        component.width,
-        component.height
+        component.width, component.height
     ) { component.placeRelative(0, 0) }
 }
 
@@ -566,8 +552,7 @@ fun VerifyCodeScreen(
             modifier = Modifier.height(5.dp)
         )
         Column(
-            modifier = modifier
-                .width(IntrinsicSize.Max),
+            modifier = modifier.width(IntrinsicSize.Max),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(onClick = { }, Modifier.fillMaxWidth()) {
@@ -598,7 +583,7 @@ fun VerifyCodeScreen(
 }
 
 
-/*@Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
@@ -608,12 +593,13 @@ fun LoginWithPasswordScreenPreview() {
             {},
             "",
             {},
-            { },
+            {},
             false,
-            null
+            null,
+            {}
         )
     }
-}*/
+}
 
 @Preview(showBackground = true)
 @Composable
