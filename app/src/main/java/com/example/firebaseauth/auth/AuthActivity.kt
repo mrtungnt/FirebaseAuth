@@ -1,6 +1,7 @@
 package com.example.firebaseauth.auth
 
 import android.Manifest
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -10,12 +11,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -29,7 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,13 +38,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import com.example.firebaseauth.CountryNamesAndDialCodes
-import com.example.firebaseauth.R
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.*
+import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -83,6 +80,10 @@ class AuthActivity : ComponentActivity() {
         }
     }
 
+    private val locationSourceSettings = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { whenLocationPermissionGranted() }
+
     fun handleLocationPermissionRequest() {
         val permissionCheck = ContextCompat.checkSelfPermission(
             applicationContext, Manifest.permission.ACCESS_COARSE_LOCATION
@@ -117,11 +118,57 @@ class AuthActivity : ComponentActivity() {
     }
 
     private fun whenLocationPermissionGranted() {
-        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
+        val locationSettingsRequestBuilder = LocationSettingsRequest.Builder()
+            .addLocationRequest(LocationRequest.create())
+        val settingsClient: SettingsClient = LocationServices.getSettingsClient(this)
+        val taskLocationSettingsResponse: Task<LocationSettingsResponse> =
+            settingsClient.checkLocationSettings(locationSettingsRequestBuilder.build())
+        taskLocationSettingsResponse.addOnSuccessListener {
+            if (it.locationSettingsStates != null)
+                if (it.locationSettingsStates!!.isLocationPresent && !it.locationSettingsStates!!.isLocationUsable) {
+                    Toast.makeText(
+                        applicationContext, "Location feature unavailable", 100
+                    )
+                }
+            Log.d(
+                "LocationSettingsResponse",
+                "value: $it"
+            )
+        }
+            .addOnFailureListener {
+                Toast.makeText(
+                    applicationContext, "Exception: ${it.message}", 1000
+                )
+                Log.d(
+                    "LocationSettingsResponseException",
+                    "value: $it"
+                )
+                if (it is ResolvableApiException){
+                    // Location settings are not satisfied, but this can be fixed
+                    // by showing the user a dialog.
+                    try {
+                        // Show the dialog by calling startResolutionForResult(),
+                        // and check the result in onActivityResult().
+                        it.startResolutionForResult(this,
+                            6)
+                    } catch (sendEx: IntentSender.SendIntentException) {
+                        // Ignore the error.
+                        Toast.makeText(
+                            applicationContext, "SendIntentException: ${it.message}", 1000
+                        )
+                        Log.d(
+                            "SendIntentException",
+                            "value: $it"
+                        )
+                    }
+                }
+            }
+
+        /*fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
             .addOnSuccessListener { location ->
-                if (location == null) Toast.makeText(
-                    applicationContext, "Location not available", 100
-                ) else {
+                if (location == null) {
+                    locationSourceSettings.launch(Intent("android.settings.LOCATION_SOURCE_SETTINGS"))
+                } else {
                     Log.d(
                         "Location",
                         "latitude: ${location.latitude} longtitude: ${location.longitude} "
@@ -131,7 +178,7 @@ class AuthActivity : ComponentActivity() {
                 Toast.makeText(
                     applicationContext, exc.message, 100
                 )
-            }
+            }*/
     }
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -144,10 +191,9 @@ class AuthActivity : ComponentActivity() {
 
         setContent {
             FirebaseAuthTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
-                ) {
+                val scope = rememberCoroutineScope()
+                Scaffold(scaffoldState = rememberScaffoldState())
+                {
                     /*val authViewModel = viewModel<AuthViewModel>()
                     Log.d(
                         "authViewModel",
@@ -194,10 +240,16 @@ class AuthActivity : ComponentActivity() {
                             callbacks,
                         )
                     }
-                    AuthHomeScreen(
-                        phoneAuth,
-                        this@AuthActivity,
-                    )
+
+                    // A surface container using the 'background' color from the theme
+                    Surface(
+                        modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
+                    ) {
+                        AuthHomeScreen(
+                            phoneAuth,
+                            this@AuthActivity,
+                        )
+                    }
                 }
             }
         }
