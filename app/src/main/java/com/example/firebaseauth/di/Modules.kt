@@ -56,10 +56,10 @@ object Modules {
     fun providesSelectedCountryDataStore(@ApplicationContext context: Context): DataStore<SelectedCountry> =
         DataStoreFactory.create(serializer = SelectedCountrySerializer, produceFile = {
             context.dataStoreFile(
-                SELECTED_COUNTRY_FILE_NAME
+                SAVED_SELECTED_COUNTRY_FILE_NAME
             )
         })
 }
 
 const val COUNTRY_NAMES_AND_DIAL_CODES_FILE_NAME = "country_names_and_dial_codes.pb"
-const val SELECTED_COUNTRY_FILE_NAME = "selected_country.pb"
+const val SAVED_SELECTED_COUNTRY_FILE_NAME = "saved_selected_country.pb"

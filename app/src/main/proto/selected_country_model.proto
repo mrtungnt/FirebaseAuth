@@ -6,5 +6,5 @@ option java_multiple_files = true;
 import "country_names_and_dial_codes_model_local.proto";
 
 message SelectedCountry{
-  CountryNamesAndDialCodes.NameAndDialCode name_and_dial_code = 1;
+  CountryNamesAndDialCodes.NameAndDialCode container = 1;
 }

@@ -1,5 +1,6 @@
 package com.example.firebaseauth.auth
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -41,7 +42,7 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             val r = countryNamesAndDialCodesRepository.getCountriesAndDialCodes()
             if (r.isSuccess) {
-                _countriesAndDialCodes = r.getOrNull()?.namesAndDialCodesList!!
+                _countriesAndDialCodes = r.getOrNull()?.entriesList!!
             } else r.onFailure {
                 _connectionExceptionMessage = it.message!!
             }
@@ -116,6 +117,16 @@ class AuthViewModel @Inject constructor(
     fun saveSelectedCountry(selectedCountry: CountryNamesAndDialCodes.NameAndDialCode) {
         viewModelScope.launch {
             savedSelectedCountryRepository.saveSelectedCountry(selectedCountry)
+        }
+    }
+
+    fun setSelectedCountry(countryName: String) {
+        viewModelScope.launch {
+            try {
+                saveSelectedCountry(_countriesAndDialCodes.first { it.name == countryName })
+            } catch (exc: NoSuchElementException) {
+                Log.e("NoSuchElementException", "msg: ${exc.message}")
+            }
         }
     }
 }

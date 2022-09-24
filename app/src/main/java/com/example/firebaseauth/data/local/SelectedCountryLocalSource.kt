@@ -9,7 +9,7 @@ import javax.inject.Inject
 class SelectedCountryLocalSource @Inject constructor(@SelectedCountryDataStore private val dataStore: DataStore<SelectedCountry>) {
     suspend fun saveSelectedCountry(selectedCountry: CountryNamesAndDialCodes.NameAndDialCode) {
         dataStore.updateData {
-            it.toBuilder().setNameAndDialCode(selectedCountry).build()
+            it.toBuilder().setContainer(selectedCountry).build()
         }
     }
 

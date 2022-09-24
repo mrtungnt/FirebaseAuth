@@ -13,7 +13,7 @@ class CountryNamesAndDialCodesRepository @Inject constructor(
 ) {
     suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes> {
         return when {
-            localSource.getData().first().namesAndDialCodesCount > 0 -> Result.success(
+            localSource.getData().first().entriesCount > 0 -> Result.success(
                 localSource.getData().first()
             )
             else -> {

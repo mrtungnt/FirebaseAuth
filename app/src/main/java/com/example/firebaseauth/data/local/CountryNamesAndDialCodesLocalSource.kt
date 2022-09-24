@@ -9,6 +9,6 @@ class CountryNamesAndDialCodesLocalSource @Inject constructor(@CountryNamesAndDi
     fun getData() = dataStore.data
 
     suspend fun saveCountriesAndDialCodes(countryNamesAndDialCodes: Collection<CountryNamesAndDialCodes.NameAndDialCode>) {
-        dataStore.updateData { it.toBuilder().addAllNamesAndDialCodes(countryNamesAndDialCodes).build() }
+        dataStore.updateData { it.toBuilder().addAllEntries(countryNamesAndDialCodes).build() }
     }
 }

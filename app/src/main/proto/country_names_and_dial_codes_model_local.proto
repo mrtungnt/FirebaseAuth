@@ -8,6 +8,6 @@ message CountryNamesAndDialCodes{
     string name = 1;
     string dial_code = 2;
   }
-  repeated NameAndDialCode names_and_dial_codes = 1;
+  repeated NameAndDialCode entries = 1;
 }
 

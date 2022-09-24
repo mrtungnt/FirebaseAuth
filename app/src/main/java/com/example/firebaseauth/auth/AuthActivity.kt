@@ -1,13 +1,16 @@
 package com.example.firebaseauth.auth
 
 import android.Manifest
+import android.app.PendingIntent
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
@@ -42,13 +45,14 @@ import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.common.internal.Preconditions
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -80,9 +84,35 @@ class AuthActivity : ComponentActivity() {
         }
     }
 
-    private val locationSourceSettings = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { whenLocationPermissionGranted() }
+    private val intentSenderForResult =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+            if (it.resultCode == RESULT_OK) {
+                Log.d("intentSenderForResult", "Location setting: On now")
+                val taskLocation = fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                    null
+                )
+                taskLocation.addOnSuccessListener {
+                    GlobalScope.launch {
+                        withContext(Dispatchers.Default) {
+                            val countryName = Geocoder(applicationContext).getFromLocation(
+                                it.latitude,
+                                it.longitude,
+                                1
+                            ).first().countryName
+                            authViewModel.setSelectedCountry(countryName)
+                        }
+                    }
+                }
+                taskLocation.addOnFailureListener {
+                    Log.e(
+                        "LocationException",
+                        "msg: ${it.message}"
+                    )
+                }
+            } else
+                Log.d("ResolutionForResult", "resultCode: ${it.resultCode}")
+        }
 
     fun handleLocationPermissionRequest() {
         val permissionCheck = ContextCompat.checkSelfPermission(
@@ -123,62 +153,65 @@ class AuthActivity : ComponentActivity() {
         val settingsClient: SettingsClient = LocationServices.getSettingsClient(this)
         val taskLocationSettingsResponse: Task<LocationSettingsResponse> =
             settingsClient.checkLocationSettings(locationSettingsRequestBuilder.build())
+
         taskLocationSettingsResponse.addOnSuccessListener {
-            if (it.locationSettingsStates != null)
-                if (it.locationSettingsStates!!.isLocationPresent && !it.locationSettingsStates!!.isLocationUsable) {
-                    Toast.makeText(
-                        applicationContext, "Location feature unavailable", 100
-                    )
-                }
-            Log.d(
-                "LocationSettingsResponse",
-                "value: $it"
+            val taskLocation = fusedLocationClient.getCurrentLocation(
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                null
             )
-        }
-            .addOnFailureListener {
-                Toast.makeText(
-                    applicationContext, "Exception: ${it.message}", 1000
-                )
-                Log.d(
-                    "LocationSettingsResponseException",
-                    "value: $it"
-                )
-                if (it is ResolvableApiException){
-                    // Location settings are not satisfied, but this can be fixed
-                    // by showing the user a dialog.
-                    try {
-                        // Show the dialog by calling startResolutionForResult(),
-                        // and check the result in onActivityResult().
-                        it.startResolutionForResult(this,
-                            6)
-                    } catch (sendEx: IntentSender.SendIntentException) {
-                        // Ignore the error.
-                        Toast.makeText(
-                            applicationContext, "SendIntentException: ${it.message}", 1000
-                        )
-                        Log.d(
-                            "SendIntentException",
-                            "value: $it"
-                        )
+            taskLocation.addOnSuccessListener {
+                GlobalScope.launch {
+                    withContext(Dispatchers.Default) {
+                        val countryName = Geocoder(applicationContext).getFromLocation(
+                            it.latitude,
+                            it.longitude,
+                            1
+                        ).first().countryName
+                        authViewModel.setSelectedCountry(countryName)
                     }
                 }
             }
+            taskLocation.addOnFailureListener {
+                Log.e(
+                    "LocationException",
+                    "msg: ${it.message}"
+                )
+            }
+        }
+        taskLocationSettingsResponse.addOnFailureListener {
+            Log.e(
+                "LocationSettingsResponseException",
+                "value: $it"
+            )
+            if (it is ResolvableApiException) {
+                // Location settings are not satisfied, but this can be fixed
+                // by showing the user a dialog.
+                try {
+                    // Show the dialog by calling startResolutionForResult(),
+                    // and check the result in onActivityResult().
+                    val status = it.status
+                    if (status.hasResolution()) {
+                        val pendingIntent: PendingIntent = status.resolution!!
+//                        Preconditions.checkNotNull(pendingIntent)
+                        intentSenderForResult.launch(
+                            IntentSenderRequest.Builder(pendingIntent.intentSender)/*.setFillInIntent(null)
+                                .setFlags(0, 0)*/.build()
+                        )
+                    }
 
-        /*fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
-            .addOnSuccessListener { location ->
-                if (location == null) {
-                    locationSourceSettings.launch(Intent("android.settings.LOCATION_SOURCE_SETTINGS"))
-                } else {
-                    Log.d(
-                        "Location",
-                        "latitude: ${location.latitude} longtitude: ${location.longitude} "
+                    /*it.startResolutionForResult(
+                        this,
+                        it.statusCode
+                    )*/
+                } catch (sendEx: IntentSender.SendIntentException) {
+                    // Ignore the error.
+                    Log.e(
+                        "SendIntentException",
+                        "msg: ${it.message}"
                     )
                 }
-            }.addOnFailureListener { exc ->
-                Toast.makeText(
-                    applicationContext, exc.message, 100
-                )
-            }*/
+            }
+        }
     }
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -310,9 +343,9 @@ fun AuthHomeScreen(
                             phoneNumber = it
                         },
                         onDone = {
-                            if (savedSelectedCountryState.nameAndDialCode.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
+                            if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
                             else phoneAuth.startPhoneNumberVerification(
-                                "${savedSelectedCountryState.nameAndDialCode.dialCode}${phoneNumber.trimStart { it == '0' }}",
+                                "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authState.resendingToken
                             )
                             kbController?.hide()
@@ -374,7 +407,18 @@ fun LoginWithPhoneNumberScreen(
         }
 
         var selectedCountryName by rememberSaveable {
-            mutableStateOf(selectedCountry.nameAndDialCode.name)
+            mutableStateOf("")
+        }
+
+        var lastSelectedCountryDialCode by rememberSaveable {
+            mutableStateOf("")
+        }
+
+        if (!lastSelectedCountryDialCode.contentEquals(selectedCountry.container.dialCode)) {
+            selectedCountryName = selectedCountry.container.name
+            SideEffect {
+                lastSelectedCountryDialCode = selectedCountry.container.dialCode
+            }
         }
 
         val horizontalCenterColumnWidth = 280.dp
@@ -393,8 +437,8 @@ fun LoginWithPhoneNumberScreen(
                     onExpandedChange = { expanded = !expanded },
                     modifier = Modifier
                         .onFocusChanged {
-                            if (!it.isFocused) if (selectedCountryName != selectedCountry.nameAndDialCode.name) selectedCountryName =
-                                selectedCountry.nameAndDialCode.name
+                            if (!it.isFocused) if (selectedCountryName != selectedCountry.container.name) selectedCountryName =
+                                selectedCountry.container.name
                         }
                         .padding(top = 30.dp)
 
@@ -447,7 +491,7 @@ fun LoginWithPhoneNumberScreen(
                         modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
                             (horizontalCenterColumnWidth.toPx() * .4).toInt()
                         }),
-                        value = selectedCountry.nameAndDialCode.dialCode,
+                        value = selectedCountry.container.dialCode,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(text = "Dial code") },
