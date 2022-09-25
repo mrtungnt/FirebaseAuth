@@ -2,9 +2,13 @@ package com.example.firebaseauth.auth
 
 import android.Manifest
 import android.app.PendingIntent
+import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkRequest
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -94,14 +98,14 @@ class AuthActivity : ComponentActivity() {
                 )
                 taskLocation.addOnSuccessListener {
                     GlobalScope.launch {
-                        withContext(Dispatchers.Default) {
+//                        withContext(Dispatchers.Default) {
                             val countryName = Geocoder(applicationContext).getFromLocation(
                                 it.latitude,
                                 it.longitude,
                                 1
                             ).first().countryName
                             authViewModel.setSelectedCountry(countryName)
-                        }
+//                        }
                     }
                 }
                 taskLocation.addOnFailureListener {
@@ -216,8 +220,17 @@ class AuthActivity : ComponentActivity() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
+    var isConnected by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val connMgr =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        connMgr.registerNetworkCallback(
+            NetworkRequest.Builder().build(),
+            NetworkCallbackExt(this)
+        )
+
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -482,11 +495,11 @@ fun LoginWithPhoneNumberScreen(
                 }
 
                 Button(
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier.padding(top = 18.dp),
                     onClick = handleLocationPermissionRequest
                 ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
 
-                Row(modifier = Modifier.padding(top = 8.dp)) {
+                Row(modifier = Modifier.padding(top = 12.dp)) {
                     OutlinedTextField(
                         modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
                             (horizontalCenterColumnWidth.toPx() * .4).toInt()
@@ -494,7 +507,7 @@ fun LoginWithPhoneNumberScreen(
                         value = selectedCountry.container.dialCode,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(text = "Dial code") },
+                        label = { Text(text = "Dial code (*)") },
                     )
                     OutlinedTextField(
                         modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
@@ -702,5 +715,13 @@ fun LoginWithPasswordScreenPreview() {
 fun VerifyCodeScreenPreview() {
     FirebaseAuthTheme {
         VerifyCodeScreen("", {}, null, false)
+    }
+}
+
+class NetworkCallbackExt(private val activity: AuthActivity) :
+    ConnectivityManager.NetworkCallback() {
+    override fun onAvailable(network: Network) {
+        super.onAvailable(network)
+        activity.isConnected = true
     }
 }
