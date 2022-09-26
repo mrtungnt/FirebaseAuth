@@ -16,4 +16,5 @@ data class AuthUIState @Inject constructor(
     var verificationExceptionMessage: String?,
     var requestInProgress: Boolean,
     var verificationInProgress: Boolean,
+    var snackbarMsg: String,
 ) : Parcelable

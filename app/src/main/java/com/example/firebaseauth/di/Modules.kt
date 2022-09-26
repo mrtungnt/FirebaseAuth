@@ -36,8 +36,9 @@ object Modules {
         Firebase.auth.currentUser != null,
         null,
         null,
-        requestInProgress = false,
-        verificationInProgress = false,
+        false,
+        false,
+        "",
     )
 
     @CountryNamesAndDialCodesDataStore

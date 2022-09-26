@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.net.ConnectivityManager
@@ -57,10 +58,7 @@ import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -135,30 +133,23 @@ class AuthActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun updateSelectedCountryFromLocation(location: Location) = coroutineScope {
-        launch(context = Dispatchers.Default) {
-            Log.d("coroutineContext(updateSelectedCountryFromLocation)", "$coroutineContext")
+    private suspend fun getFromLocation(location: Location): List<Address> {
+        return withContext(context = authViewModel.viewModelScope.coroutineContext + Dispatchers.IO) {
             try {
-                Log.d("updateSelectedCountryFromLocation", "(inside coroutine) start")
-                /* var x = 0.0
-                 for (i in 1..100000)
-                     for (ii in 1..6000)
-                         x = 10 + 10.0
-                 x*/
-                val countryName = Geocoder(applicationContext).getFromLocation(
+                Geocoder(applicationContext).getFromLocation(
                     location.latitude,
                     location.longitude,
                     1
-                ).first().countryName
-                authViewModel.setSelectedCountry(countryName)
+                )
             } catch (exc: java.lang.Exception) {
-                Log.e("Location (taken in GlobalScope)", "${exc.message}")
+                Log.e("Location", "${exc.message}")
+                emptyList<Address>()
             }
-            Log.d("updateSelectedCountryFromLocation", "(inside coroutine) finish")
         }
     }
 
     private fun whenLocationReady() {
+        authViewModel.updateSnackbar("Đang xác định quốc gia từ vị trí...")
         val taskLocation = fusedLocationClient.getCurrentLocation(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             null
@@ -166,19 +157,20 @@ class AuthActivity : ComponentActivity() {
         taskLocation.addOnSuccessListener {
             if (it != null) {
                 authViewModel.viewModelScope.launch {
-                    Log.d("coroutineContext(viewModelScope)", "$coroutineContext")
-                    updateSelectedCountryFromLocation(it)
+                    val address = getFromLocation(it)
+                    if (address.isNotEmpty()) {
+                        authViewModel.setSelectedCountry(address.first().countryName)
+                        authViewModel.updateSnackbar("Đã xác định quốc gia từ vị trí.")
+                    }
                 }
-                /*GlobalScope.launch {
-                    updateSelectedCountryFromLocation(it)
-                }*/
-                Log.d("updateSelectedCountryFromLocation", "after call")
-            } else
+            } else {
                 Log.d("Location", "is null")
+                authViewModel.updateSnackbar("Không xác định được vị trí.")
+            }
         }
         taskLocation.addOnFailureListener {
             Log.e(
-                "LocationException",
+                "Location",
                 "msg: ${it.message}"
             )
         }
@@ -196,7 +188,7 @@ class AuthActivity : ComponentActivity() {
         }
         taskLocationSettingsResponse.addOnFailureListener {
             Log.e(
-                "LocationSettingsResponseException",
+                "LocationSettingsResponse",
                 "value: $it"
             )
             if (it is ResolvableApiException) {
@@ -222,7 +214,7 @@ class AuthActivity : ComponentActivity() {
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
                     Log.e(
-                        "SendIntentException",
+                        "SendIntent",
                         "msg: ${it.message}"
                     )
                 }
@@ -234,6 +226,7 @@ class AuthActivity : ComponentActivity() {
 
     var isConnected by mutableStateOf(false)
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val connMgr =
@@ -249,8 +242,8 @@ class AuthActivity : ComponentActivity() {
 
         setContent {
             FirebaseAuthTheme {
-                val scope = rememberCoroutineScope()
-                Scaffold(scaffoldState = rememberScaffoldState())
+                val scaffoldState = rememberScaffoldState()
+                Scaffold(scaffoldState = scaffoldState)
                 {
                     /*val authViewModel = viewModel<AuthViewModel>()
                     Log.d(
@@ -299,14 +292,29 @@ class AuthActivity : ComponentActivity() {
                         )
                     }
 
+                    val authState by authViewModel.authStateFlow.collectAsState()
+
+
                     // A surface container using the 'background' color from the theme
                     Surface(
                         modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
                     ) {
                         AuthHomeScreen(
                             phoneAuth,
+                            authState,
                             this@AuthActivity,
                         )
+                    }
+
+                    if (authState.snackbarMsg.isNotEmpty()) {
+                        val kbController = LocalSoftwareKeyboardController.current
+                        kbController?.hide()
+                        LaunchedEffect(authState.snackbarMsg) {
+                            val snackbarResult =
+                                scaffoldState.snackbarHostState.showSnackbar(authState.snackbarMsg)
+                            if (snackbarResult == SnackbarResult.Dismissed)
+                                authViewModel.updateSnackbar("")
+                        }
                     }
                 }
             }
@@ -318,9 +326,9 @@ class AuthActivity : ComponentActivity() {
 @Composable
 fun AuthHomeScreen(
     phoneAuth: PhoneAuth,
+    authState: AuthUIState,
     targetActivity: AuthActivity,
 ) {
-    val authState by targetActivity.authViewModel.authStateFlow.collectAsState()
     val savedSelectedCountryState by targetActivity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
     )
