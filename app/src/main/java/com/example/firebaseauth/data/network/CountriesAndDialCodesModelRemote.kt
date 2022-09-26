@@ -10,7 +10,7 @@ data class CountryAndDialCodeModelRemote(val name: String, val dial_code: String
 
 @Serializable()
 data class CountriesAndDialCodesModelRemote(
-    private val error: Boolean,
-    private val msg: String,
+    /*private val error: Boolean,
+    private val msg: String,*/
     val data: List<CountryAndDialCodeModelRemote>
 )

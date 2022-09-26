@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.location.Location
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkRequest
@@ -44,19 +45,22 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewModelScope
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.common.internal.Preconditions
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -88,34 +92,14 @@ class AuthActivity : ComponentActivity() {
         }
     }
 
+
     private val intentSenderForResult =
-        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
-            if (it.resultCode == RESULT_OK) {
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
+            if (activityResult.resultCode == RESULT_OK) {
                 Log.d("intentSenderForResult", "Location setting: On now")
-                val taskLocation = fusedLocationClient.getCurrentLocation(
-                    Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                    null
-                )
-                taskLocation.addOnSuccessListener {
-                    GlobalScope.launch {
-//                        withContext(Dispatchers.Default) {
-                            val countryName = Geocoder(applicationContext).getFromLocation(
-                                it.latitude,
-                                it.longitude,
-                                1
-                            ).first().countryName
-                            authViewModel.setSelectedCountry(countryName)
-//                        }
-                    }
-                }
-                taskLocation.addOnFailureListener {
-                    Log.e(
-                        "LocationException",
-                        "msg: ${it.message}"
-                    )
-                }
+                whenLocationReady()
             } else
-                Log.d("ResolutionForResult", "resultCode: ${it.resultCode}")
+                Log.d("ResolutionForResult", "resultCode: ${activityResult.resultCode}")
         }
 
     fun handleLocationPermissionRequest() {
@@ -151,6 +135,55 @@ class AuthActivity : ComponentActivity() {
         }
     }
 
+    private suspend fun updateSelectedCountryFromLocation(location: Location) = coroutineScope {
+        launch(context = Dispatchers.Default) {
+            Log.d("coroutineContext(updateSelectedCountryFromLocation)", "$coroutineContext")
+            try {
+                Log.d("updateSelectedCountryFromLocation", "(inside coroutine) start")
+                /* var x = 0.0
+                 for (i in 1..100000)
+                     for (ii in 1..6000)
+                         x = 10 + 10.0
+                 x*/
+                val countryName = Geocoder(applicationContext).getFromLocation(
+                    location.latitude,
+                    location.longitude,
+                    1
+                ).first().countryName
+                authViewModel.setSelectedCountry(countryName)
+            } catch (exc: java.lang.Exception) {
+                Log.e("Location (taken in GlobalScope)", "${exc.message}")
+            }
+            Log.d("updateSelectedCountryFromLocation", "(inside coroutine) finish")
+        }
+    }
+
+    private fun whenLocationReady() {
+        val taskLocation = fusedLocationClient.getCurrentLocation(
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            null
+        )
+        taskLocation.addOnSuccessListener {
+            if (it != null) {
+                authViewModel.viewModelScope.launch {
+                    Log.d("coroutineContext(viewModelScope)", "$coroutineContext")
+                    updateSelectedCountryFromLocation(it)
+                }
+                /*GlobalScope.launch {
+                    updateSelectedCountryFromLocation(it)
+                }*/
+                Log.d("updateSelectedCountryFromLocation", "after call")
+            } else
+                Log.d("Location", "is null")
+        }
+        taskLocation.addOnFailureListener {
+            Log.e(
+                "LocationException",
+                "msg: ${it.message}"
+            )
+        }
+    }
+
     private fun whenLocationPermissionGranted() {
         val locationSettingsRequestBuilder = LocationSettingsRequest.Builder()
             .addLocationRequest(LocationRequest.create())
@@ -159,28 +192,7 @@ class AuthActivity : ComponentActivity() {
             settingsClient.checkLocationSettings(locationSettingsRequestBuilder.build())
 
         taskLocationSettingsResponse.addOnSuccessListener {
-            val taskLocation = fusedLocationClient.getCurrentLocation(
-                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                null
-            )
-            taskLocation.addOnSuccessListener {
-                GlobalScope.launch {
-                    withContext(Dispatchers.Default) {
-                        val countryName = Geocoder(applicationContext).getFromLocation(
-                            it.latitude,
-                            it.longitude,
-                            1
-                        ).first().countryName
-                        authViewModel.setSelectedCountry(countryName)
-                    }
-                }
-            }
-            taskLocation.addOnFailureListener {
-                Log.e(
-                    "LocationException",
-                    "msg: ${it.message}"
-                )
-            }
+            whenLocationReady()
         }
         taskLocationSettingsResponse.addOnFailureListener {
             Log.e(
@@ -499,10 +511,10 @@ fun LoginWithPhoneNumberScreen(
                     onClick = handleLocationPermissionRequest
                 ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
 
-                Row(modifier = Modifier.padding(top = 12.dp)) {
+                Row(modifier = Modifier.padding(top = 10.dp)) {
                     OutlinedTextField(
                         modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
-                            (horizontalCenterColumnWidth.toPx() * .4).toInt()
+                            (horizontalCenterColumnWidth.toPx() * .44).toInt()
                         }),
                         value = selectedCountry.container.dialCode,
                         onValueChange = {},
@@ -511,7 +523,7 @@ fun LoginWithPhoneNumberScreen(
                     )
                     OutlinedTextField(
                         modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
-                            (horizontalCenterColumnWidth.toPx() * .6).toInt()
+                            (horizontalCenterColumnWidth.toPx() * .56).toInt()
                         }),
                         value = phoneNumber,
                         onValueChange = onPhoneNumberChange,
@@ -565,7 +577,7 @@ fun LoginWithPhoneNumberScreen(
                     onClick = onDone,
                     modifier = Modifier
                         .width(horizontalCenterColumnWidth)
-                        .padding(top = 30.dp)
+                        .padding(top = 24.dp)
                 ) { Text(text = "Xong") }
             }
         }
