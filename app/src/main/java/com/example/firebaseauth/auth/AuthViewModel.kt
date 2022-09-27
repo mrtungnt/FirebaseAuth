@@ -1,7 +1,6 @@
 package com.example.firebaseauth.auth
 
 import android.util.Log
-import androidx.compose.material.SnackbarDuration
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -15,6 +14,8 @@ import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -54,18 +55,6 @@ class AuthViewModel @Inject constructor(
         Firebase.auth.signOut()
         savedState[stateKeyName] = authState.copy(
             userSignedIn = Firebase.auth.currentUser != null
-        )
-    }
-
-    fun clearVerificationExceptionMessage() {
-        savedState[stateKeyName] = authStateFlow.value.copy(
-            verificationExceptionMessage = null,
-        )
-    }
-
-    fun clearRequestExceptionMessage() {
-        savedState[stateKeyName] = authStateFlow.value.copy(
-            requestExceptionMessage = null,
         )
     }
 
@@ -131,7 +120,17 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun updateSnackbar(message: String) {
+    fun clearSnackbar(){
+        savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = "")
+    }
+
+    fun updateSnackbar(message: String, infinite: Boolean = false) {
+        if (!infinite && message.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.Default) {
+                delay(4000L)
+                savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = "")
+            }
+        }
         savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = message)
     }
 }

@@ -58,7 +58,10 @@ import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -149,7 +152,10 @@ class AuthActivity : ComponentActivity() {
     }
 
     private fun whenLocationReady() {
-        authViewModel.updateSnackbar("Đang xác định quốc gia từ vị trí...")
+        authViewModel.updateSnackbar(
+            "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể sẽ mất khoảng hơn 1 phút.",
+            true
+        )
         val taskLocation = fusedLocationClient.getCurrentLocation(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             null
@@ -310,12 +316,12 @@ class AuthActivity : ComponentActivity() {
                         val kbController = LocalSoftwareKeyboardController.current
                         kbController?.hide()
                         LaunchedEffect(authState.snackbarMsg) {
-                            val snackbarResult =
-                                scaffoldState.snackbarHostState.showSnackbar(authState.snackbarMsg)
-                            if (snackbarResult == SnackbarResult.Dismissed)
-                                authViewModel.updateSnackbar("")
+                            scaffoldState.snackbarHostState.showSnackbar(
+                                authState.snackbarMsg,
+                                duration = SnackbarDuration.Indefinite
+                            )
                         }
-                    }
+                    } else scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
                 }
             }
         }
@@ -368,11 +374,15 @@ fun AuthHomeScreen(
                         selectedCountry = savedSelectedCountryState,
                         onSelectedCountryChange = {
                             targetActivity.authViewModel.saveSelectedCountry(it)
-                            if (hasException(authState.requestExceptionMessage)) targetActivity.authViewModel.clearRequestExceptionMessage()
+                            if (hasException(authState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
+                                ""
+                            )
                         },
                         phoneNumber = phoneNumber,
                         onPhoneNumberChange = {
-                            if (hasException(authState.requestExceptionMessage)) targetActivity.authViewModel.clearRequestExceptionMessage()
+                            if (hasException(authState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
+                                ""
+                            )
                             phoneNumber = it
                         },
                         onDone = {
@@ -394,11 +404,15 @@ fun AuthHomeScreen(
                         mutableStateOf("")
                     }
 
+                    targetActivity.authViewModel.clearSnackbar()
+
                     VerifyCodeScreen(
                         codeToVerify = codeToVerify,
                         onCodeChange = {
                             if (it.length <= VERIFICATION_CODE_LENGTH) {
-                                if (hasException(authState.verificationExceptionMessage)) targetActivity.authViewModel.clearVerificationExceptionMessage()
+                                if (hasException(authState.verificationExceptionMessage)) targetActivity.authViewModel.onVerificationException(
+                                    ""
+                                )
 
                                 if (it.last().code != 10) // Not key Enter
                                     codeToVerify = it
