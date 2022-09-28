@@ -125,7 +125,8 @@ class AuthViewModel @Inject constructor(
     }
 
     fun clearSnackbar() {
-        savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = "")
+        if (authStateFlow.value.snackbarMsg.isNotEmpty())
+            savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = "")
     }
 
     fun updateSnackbar(message: String, infinite: Boolean = false) {

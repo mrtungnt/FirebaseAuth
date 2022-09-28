@@ -543,7 +543,7 @@ fun LoginWithPhoneNumberScreen(
                         value = selectedCountry.container.dialCode,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(text = "Dial code (*)") },
+                        label = { Text(text = "Mã đt QG (*)") },
                     )
                     OutlinedTextField(
                         modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
@@ -589,20 +589,36 @@ fun LoginWithPhoneNumberScreen(
                 }
                 Column(
                     Modifier
-                        .padding(5.dp)
+                        .padding(18.dp)
                         .width(IntrinsicSize.Max)
                 ) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
-                    Text(text = message, textAlign = TextAlign.Center)
+                    Text(
+                        text = message,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
                 }
             } else {
-                Button(
-                    onClick = onDone,
-                    modifier = Modifier
-                        .width(horizontalCenterColumnWidth)
-                        .padding(top = 24.dp)
-                ) { Text(text = "Xong") }
+                val guidance = remember {
+                    "(*) Người dùng không phải nhập trực tiếp mã điện thoại quốc gia, mà thông qua chọn quốc gia  phát hành thẻ sim dùng để đăng ký."
+                }
+                Column(modifier = Modifier.width(horizontalCenterColumnWidth)) {
+                    Button(
+                        onClick = onDone,
+                        modifier = Modifier
+//                            .width(horizontalCenterColumnWidth)
+                            .fillMaxWidth()
+                            .padding(top = 24.dp)
+                    ) { Text(text = "Xong") }
+
+                    Text(
+                        text = guidance,
+                        textAlign = TextAlign.Justify,
+                        modifier = Modifier.padding(top = 30.dp)
+                    )
+                }
             }
         }
     }
