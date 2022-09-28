@@ -145,10 +145,10 @@ class AuthViewModel @Inject constructor(
     fun cancelPendingActiveListener() {
         Log.d(
             "locationTask",
-            "in cancelPendingActiveListener() -isSuccessful: ${locationTask?.isSuccessful!!} " +
-                    "-isComplete ${locationTask?.isComplete!!}"
+            "in cancelPendingActiveListener() -isSuccessful: ${locationTask?.isSuccessful ?: "null"} " +
+                    "-isComplete ${locationTask?.isComplete ?: "null"}"
         )
-        if (!locationTask?.isSuccessful!!) {
+        if (locationTask?.isSuccessful == false) {
             if (!locationCancellationToken.isCancellationRequested) {
                 locationCancellationTokenSource.cancel()
 

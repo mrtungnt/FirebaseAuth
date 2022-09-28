@@ -231,6 +231,45 @@ class AuthActivity : ComponentActivity() {
 
     var isConnected by mutableStateOf(false)
 
+    val callbacks =
+        object : CallbacksFromPhoneAuthToHost() {
+            override fun onCodeSent(
+                verificationId: String,
+                resendingToken: PhoneAuthProvider.ForceResendingToken
+            ) {
+                authViewModel.onCodeSent(verificationId, resendingToken)
+            }
+
+            override fun onSuccessfulLogin() {
+                authViewModel.onSuccessfulLogin()
+            }
+
+            override fun onRequestException(exceptionMessage: String) {
+                authViewModel.onRequestException(exceptionMessage)
+            }
+
+            override fun onVerificationException(exceptionMessage: String) {
+                authViewModel.onVerificationException(exceptionMessage)
+            }
+
+            override fun onVerificationInProgress(inProgress: Boolean) {
+                authViewModel.onVerificationInProgress(inProgress)
+            }
+
+            override fun onRequestInProgress(inProgress: Boolean) {
+                authViewModel.onRequestInProgress(inProgress)
+            }
+
+            /*override fun onLoggingProgress(progress: Boolean) {
+                TODO("Not yet implemented")
+            }*/
+        }
+
+    val phoneAuth = PhoneAuth(
+        activity = this@AuthActivity,
+        callbacks,
+    )
+
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -242,122 +281,92 @@ class AuthActivity : ComponentActivity() {
         )
 
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
-
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
         setContent {
-            FirebaseAuthTheme {
-                val scaffoldState = rememberScaffoldState()
-                Scaffold(scaffoldState = scaffoldState)
-                {
-                    /*val authViewModel = viewModel<AuthViewModel>()
-                    Log.d(
-                        "authViewModel",
-                        "Singleton: ${authViewModel === this@AuthActivity.viewModel.value}"
-                    )*/
-                    val callbacks = remember {
-                        object : CallbacksFromPhoneAuthToHost() {
-                            override fun onCodeSent(
-                                verificationId: String,
-                                resendingToken: PhoneAuthProvider.ForceResendingToken
-                            ) {
-                                authViewModel.onCodeSent(verificationId, resendingToken)
-                            }
-
-                            override fun onSuccessfulLogin() {
-                                authViewModel.onSuccessfulLogin()
-                            }
-
-                            override fun onRequestException(exceptionMessage: String) {
-                                authViewModel.onRequestException(exceptionMessage)
-                            }
-
-                            override fun onVerificationException(exceptionMessage: String) {
-                                authViewModel.onVerificationException(exceptionMessage)
-                            }
-
-                            override fun onVerificationInProgress(inProgress: Boolean) {
-                                authViewModel.onVerificationInProgress(inProgress)
-                            }
-
-                            override fun onRequestInProgress(inProgress: Boolean) {
-                                authViewModel.onRequestInProgress(inProgress)
-                            }
-
-                            /*override fun onLoggingProgress(progress: Boolean) {
-                                TODO("Not yet implemented")
-                            }*/
-                        }
-                    }
-
-                    val phoneAuth = remember {
-                        PhoneAuth(
-                            activity = this@AuthActivity,
-                            callbacks,
-                        )
-                    }
-
-                    val authState by authViewModel.authStateFlow.collectAsState()
-
-
-                    // A surface container using the 'background' color from the theme
-                    Surface(
-                        modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
-                    ) {
-                        AuthHomeScreen(
-                            phoneAuth,
-                            authState,
-                            this@AuthActivity,
-                        )
-                    }
-
-                    if (authState.snackbarMsg.isNotEmpty()) {
-                        val kbController = LocalSoftwareKeyboardController.current
-                        kbController?.hide()
-                        LaunchedEffect(authState.snackbarMsg) {
-                            scaffoldState.snackbarHostState.showSnackbar(
-                                authState.snackbarMsg,
-                                duration = SnackbarDuration.Indefinite
-                            )
-                        }
-                    } else scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
-                }
-            }
+            if (isConnected)
+                HomeContent()
+            else
+                NoConnectionDisplay()
         }
     }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun AuthHomeScreen(
-    phoneAuth: PhoneAuth,
+fun AuthActivity.HomeContent() {
+    FirebaseAuthTheme {
+        val scaffoldState = rememberScaffoldState()
+        Scaffold(scaffoldState = scaffoldState)
+        {
+            /*val authViewModel = viewModel<AuthViewModel>()
+            Log.d(
+                "authViewModel",
+                "Singleton: ${authViewModel === this@AuthActivity.viewModel.value}"
+            )*/
+
+            val authState by authViewModel.authStateFlow.collectAsState()
+
+            // A surface container using the 'background' color from the theme
+            Surface(
+                modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
+            ) {
+                AuthHomeScreen(
+//                        phoneAuth,
+                    authState,
+//                        this@AuthActivity,
+                )
+            }
+
+            if (authState.snackbarMsg.isNotEmpty()) {
+                val kbController = LocalSoftwareKeyboardController.current
+                kbController?.hide()
+                LaunchedEffect(authState.snackbarMsg) {
+                    scaffoldState.snackbarHostState.showSnackbar(
+                        authState.snackbarMsg,
+                        duration = SnackbarDuration.Indefinite
+                    )
+                }
+            } else scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
+        }
+    }
+}
+
+@Composable
+fun NoConnectionDisplay() {
+    Text(text = "No internet connection. Waiting for connection...")
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun AuthActivity.AuthHomeScreen(
+//    phoneAuth: PhoneAuth,
     authState: AuthUIState,
-    targetActivity: AuthActivity,
+//    targetActivity: AuthActivity,
 ) {
-    val savedSelectedCountryState by targetActivity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
+    val savedSelectedCountryState by /*targetActivity.*/authViewModel.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
     )
 
     fun hasUserLoggedIn() = authState.userSignedIn
 
     when {
-        targetActivity.authViewModel.connectionExceptionMessage.isNotEmpty() -> {
-            Text(text = targetActivity.authViewModel.connectionExceptionMessage)
-        }
+        /*targetActivity.*/authViewModel.connectionExceptionMessage.isNotEmpty() -> {
+        Text(text = /*targetActivity.*/authViewModel.connectionExceptionMessage)
+    }
 
         hasUserLoggedIn() -> {
             Column {
                 val user = Firebase.auth.currentUser
                 Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
-                Button(onClick = targetActivity.authViewModel::logUserOut) {
+                Button(onClick = /*targetActivity.*/authViewModel::logUserOut) {
                     Text(text = "Sign out")
                 }
             }
         }
 
-        targetActivity.authViewModel.countriesAndDialCodes.isEmpty() -> {
-            Text("Khởi tạo")
-        }
+        /*targetActivity.*/authViewModel.countriesAndDialCodes.isEmpty() -> {
+        Text("Khởi tạo")
+    }
 
         else -> {
             when {
@@ -369,23 +378,23 @@ fun AuthHomeScreen(
                     val kbController = LocalSoftwareKeyboardController.current
 
                     LoginWithPhoneNumberScreen(
-                        countryNamesAndDialCodes = targetActivity.authViewModel.countriesAndDialCodes,
+                        countryNamesAndDialCodes = /*targetActivity.*/authViewModel.countriesAndDialCodes,
                         selectedCountry = savedSelectedCountryState,
                         onSelectedCountryChange = {
-                            targetActivity.authViewModel.saveSelectedCountry(it)
-                            if (hasException(authState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
+                            /*targetActivity.*/authViewModel.saveSelectedCountry(it)
+                            if (hasException(authState.requestExceptionMessage)) /*targetActivity.*/ authViewModel.onRequestException(
                                 ""
                             )
                         },
                         phoneNumber = phoneNumber,
                         onPhoneNumberChange = {
-                            if (hasException(authState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
+                            if (hasException(authState.requestExceptionMessage)) /*targetActivity.*/ authViewModel.onRequestException(
                                 ""
                             )
                             phoneNumber = it
                         },
                         onDone = {
-                            if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
+                            if (savedSelectedCountryState.container.dialCode.isEmpty()) /*targetActivity.*/ authViewModel.onEmptyDialCode()
                             else phoneAuth.startPhoneNumberVerification(
                                 "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authState.resendingToken
@@ -394,7 +403,7 @@ fun AuthHomeScreen(
                         },
                         requestInProgress = authState.requestInProgress,
                         exceptionMessage = authState.requestExceptionMessage,
-                        handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest
+                        handleLocationPermissionRequest = /*targetActivity*/::handleLocationPermissionRequest
                     )
                 }
 
@@ -404,15 +413,15 @@ fun AuthHomeScreen(
                     }
 
                     remember {
-                        targetActivity.authViewModel.clearSnackbar()
-                        targetActivity.authViewModel.cancelPendingActiveListener()
+                        /*targetActivity.*/authViewModel.clearSnackbar()
+                        /*targetActivity.*/authViewModel.cancelPendingActiveListener()
                     }
 
                     VerifyCodeScreen(
                         codeToVerify = codeToVerify,
                         onCodeChange = {
                             if (it.length <= VERIFICATION_CODE_LENGTH) {
-                                if (hasException(authState.verificationExceptionMessage)) targetActivity.authViewModel.onVerificationException(
+                                if (hasException(authState.verificationExceptionMessage)) /*targetActivity.*/ authViewModel.onVerificationException(
                                     ""
                                 )
 
@@ -566,19 +575,7 @@ fun LoginWithPhoneNumberScreen(
             }
 
             if (hasException(exceptionMessage)) {
-                Surface(
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .wrapContentSize(),
-                    color = MaterialTheme.colors.surface,
-                    contentColor = MaterialTheme.colors.error,
-                    elevation = 2.dp
-                ) {
-                    Text(
-                        text = exceptionMessage!!,
-                        Modifier.padding(10.dp),
-                    )
-                }
+                ExceptionShowBox(exceptionMessage = exceptionMessage!!)
             } else if (requestInProgress) {
                 var message by rememberSaveable {
                     mutableStateOf("Chờ mã xác minh")
@@ -589,7 +586,7 @@ fun LoginWithPhoneNumberScreen(
                 }
                 Column(
                     Modifier
-                        .padding(18.dp)
+                        .padding(top = 18.dp)
                         .width(IntrinsicSize.Max)
                 ) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -602,7 +599,8 @@ fun LoginWithPhoneNumberScreen(
                 }
             } else {
                 val guidance = remember {
-                    "(*) Người dùng không phải nhập trực tiếp mã điện thoại quốc gia, mà thông qua chọn quốc gia  phát hành thẻ sim dùng để đăng ký."
+                    "(*) Người dùng không phải nhập trực tiếp mã điện thoại quốc gia, " +
+                            "mà chọn quốc gia phát hành sim số điện thoại đã dùng để đăng ký."
                 }
                 Column(modifier = Modifier.width(horizontalCenterColumnWidth)) {
                     Button(
@@ -615,8 +613,8 @@ fun LoginWithPhoneNumberScreen(
 
                     Text(
                         text = guidance,
-                        textAlign = TextAlign.Justify,
-                        modifier = Modifier.padding(top = 30.dp)
+//                        textAlign = TextAlign.Justify,
+                        modifier = Modifier.padding(top = 50.dp)
                     )
                 }
             }
@@ -721,28 +719,24 @@ fun VerifyCodeScreen(
             }
         }
         if (hasException(exceptionMessage)) {
-            Box(
-                Modifier
-                    .padding(10.dp)
-                    .border(BorderStroke(3.dp, Color.Blue))
-                    .wrapContentSize()
-            ) {
-                Text(text = exceptionMessage!!, Modifier.padding(10.dp))
-            }
+            ExceptionShowBox(exceptionMessage = exceptionMessage!!)
         } else if (verificationInProgress) {
             Column(
                 Modifier
-                    .padding(5.dp)
+                    .padding(top = 18.dp)
                     .width(IntrinsicSize.Max)
             ) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
-                Text(text = "Đang xác thực", textAlign = TextAlign.Center)
+                Text(
+                    text = "Đang xác thực",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
             }
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
@@ -770,10 +764,37 @@ fun VerifyCodeScreenPreview() {
     }
 }
 
+@Composable
+fun ExceptionShowBox(exceptionMessage: String) {
+    Surface(
+        modifier = Modifier
+            .padding(10.dp)
+            .wrapContentSize(),
+        color = MaterialTheme.colors.surface,
+        contentColor = MaterialTheme.colors.error,
+        elevation = 2.dp
+    ) {
+        Text(
+            text = exceptionMessage!!,
+            Modifier.padding(10.dp),
+        )
+    }
+}
+
 class NetworkCallbackExt(private val activity: AuthActivity) :
     ConnectivityManager.NetworkCallback() {
     override fun onAvailable(network: Network) {
         super.onAvailable(network)
         activity.isConnected = true
+    }
+
+    override fun onUnavailable() {
+        super.onUnavailable()
+        activity.isConnected = false
+    }
+
+    override fun onLost(network: Network) {
+        super.onLost(network)
+        activity.isConnected = false
     }
 }
