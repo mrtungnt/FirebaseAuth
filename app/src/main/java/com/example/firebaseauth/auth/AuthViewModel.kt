@@ -1,5 +1,6 @@
 package com.example.firebaseauth.auth
 
+import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -10,6 +11,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
 import com.example.firebaseauth.data.SavedSelectedCountryRepository
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -116,11 +119,12 @@ class AuthViewModel @Inject constructor(
                 saveSelectedCountry(_countriesAndDialCodes.first { it.name == countryName })
             } catch (exc: NoSuchElementException) {
                 Log.e("NoSuchElementException", "msg: ${exc.message}")
+                updateSnackbar("Không khớp được tên quốc gia")
             }
         }
     }
 
-    fun clearSnackbar(){
+    fun clearSnackbar() {
         savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = "")
     }
 
@@ -132,5 +136,24 @@ class AuthViewModel @Inject constructor(
             }
         }
         savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = message)
+    }
+
+    var locationTask: Task<Location>? = null
+    private var locationCancellationTokenSource = CancellationTokenSource()
+    var locationCancellationToken = locationCancellationTokenSource.token
+    fun cancelPendingActiveListener() {
+        Log.d(
+            "locationTask",
+            "in cancelPendingActiveListener() -isSuccessful: ${locationTask?.isSuccessful!!} " +
+                    "-isComplete ${locationTask?.isComplete!!}"
+        )
+        if (!locationTask?.isSuccessful!!) {
+            if (!locationCancellationToken.isCancellationRequested) {
+                locationCancellationTokenSource.cancel()
+
+                locationCancellationTokenSource = CancellationTokenSource()
+                locationCancellationToken = locationCancellationTokenSource.token
+            }
+        }
     }
 }

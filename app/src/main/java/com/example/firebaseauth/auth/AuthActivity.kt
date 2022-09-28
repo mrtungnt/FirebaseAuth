@@ -93,7 +93,6 @@ class AuthActivity : ComponentActivity() {
         }
     }
 
-
     private val intentSenderForResult =
         registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
             if (activityResult.resultCode == RESULT_OK) {
@@ -153,14 +152,14 @@ class AuthActivity : ComponentActivity() {
 
     private fun whenLocationReady() {
         authViewModel.updateSnackbar(
-            "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể sẽ mất khoảng hơn 1 phút.",
+            "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể mất 30 giây.",
             true
         )
-        val taskLocation = fusedLocationClient.getCurrentLocation(
+        authViewModel.locationTask = fusedLocationClient.getCurrentLocation(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            null
+            authViewModel.locationCancellationToken
         )
-        taskLocation.addOnSuccessListener {
+        authViewModel.locationTask?.addOnSuccessListener {
             if (it != null) {
                 authViewModel.viewModelScope.launch {
                     val address = getFromLocation(it)
@@ -174,7 +173,7 @@ class AuthActivity : ComponentActivity() {
                 authViewModel.updateSnackbar("Không xác định được vị trí.")
             }
         }
-        taskLocation.addOnFailureListener {
+        authViewModel.locationTask?.addOnFailureListener {
             Log.e(
                 "Location",
                 "msg: ${it.message}"
@@ -404,7 +403,10 @@ fun AuthHomeScreen(
                         mutableStateOf("")
                     }
 
-                    targetActivity.authViewModel.clearSnackbar()
+                    remember {
+                        targetActivity.authViewModel.clearSnackbar()
+                        targetActivity.authViewModel.cancelPendingActiveListener()
+                    }
 
                     VerifyCodeScreen(
                         codeToVerify = codeToVerify,
