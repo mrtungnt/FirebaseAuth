@@ -31,15 +31,27 @@ annotation class SelectedCountryDataStore
 object Modules {
     @Singleton
     @Provides
-    fun providesAuthUIState(): AuthUIState = AuthUIState(
+    fun providesAuthHomeUIState(): AuthUIState.AuthHomeUIState = AuthUIState.AuthHomeUIState(
         "", PhoneAuthProvider.ForceResendingToken.zza(),
         Firebase.auth.currentUser != null,
         "",
-        "",
-        false,
-        false,
-        "",
     )
+
+    @Singleton
+    @Provides
+    fun providesAuthRequestUIState(): AuthUIState.AuthRequestUIState =
+        AuthUIState.AuthRequestUIState(
+            "",
+            false,
+        )
+
+    @Singleton
+    @Provides
+    fun providesAuthVerificationUIState(): AuthUIState.AuthVerificationUIState =
+        AuthUIState.AuthVerificationUIState(
+            "",
+            false,
+        )
 
     @CountryNamesAndDialCodesDataStore
     @Singleton

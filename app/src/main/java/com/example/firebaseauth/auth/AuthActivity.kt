@@ -19,8 +19,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -47,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
@@ -60,6 +58,7 @@ import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -304,29 +303,18 @@ fun AuthActivity.HomeContent() {
                 "Singleton: ${authViewModel === this@AuthActivity.viewModel.value}"
             )*/
 
-            val authState by authViewModel.authStateFlow.collectAsState()
-
             // A surface container using the 'background' color from the theme
             Surface(
                 modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
             ) {
                 AuthHomeScreen(
-//                        phoneAuth,
-                    authState,
-//                        this@AuthActivity,
+                    authViewModel,
+                    scaffoldState,
+                    phoneAuth,
+                    { authViewModel.authStateFlow },
+                    this,
                 )
             }
-
-            if (authState.snackbarMsg.isNotEmpty()) {
-                val kbController = LocalSoftwareKeyboardController.current
-                kbController?.hide()
-                LaunchedEffect(authState.snackbarMsg) {
-                    scaffoldState.snackbarHostState.showSnackbar(
-                        authState.snackbarMsg,
-                        duration = SnackbarDuration.Indefinite
-                    )
-                }
-            } else scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
         }
     }
 }
@@ -338,39 +326,61 @@ fun NoConnectionDisplay() {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun AuthActivity.AuthHomeScreen(
-//    phoneAuth: PhoneAuth,
-    authState: AuthUIState,
-//    targetActivity: AuthActivity,
+fun AuthHomeScreen(
+    viewModel: AuthViewModel = viewModel(),
+    scaffoldState: ScaffoldState,
+    phoneAuth: PhoneAuth,
+    authUIStateFlowProvider: () -> StateFlow<AuthUIState>,
+    targetActivity: AuthActivity,
 ) {
-    val savedSelectedCountryState by /*targetActivity.*/authViewModel.flowOfSavedSelectedCountry.collectAsState(
+    val savedSelectedCountryState by targetActivity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
     )
 
-    fun hasUserLoggedIn() = authState.userSignedIn
+    var authHomeUIState by rememberSaveable {
+        mutableStateOf(viewModel.authState.authHomeUIState)
+    }
+
+    var authRequestUIState by rememberSaveable {
+        mutableStateOf(viewModel.authState.authRequestUIState)
+    }
+
+    var authVerificationUIState by rememberSaveable {
+        mutableStateOf(viewModel.authState.authVerificationUIState)
+    }
+
+    LaunchedEffect(key1 = Unit) {
+        authUIStateFlowProvider().collect {
+            authHomeUIState = it.authHomeUIState
+            authRequestUIState = it.authRequestUIState
+            authVerificationUIState = it.authVerificationUIState
+        }
+    }
+
+    fun hasUserLoggedIn() = authHomeUIState.userSignedIn
 
     when {
-        /*targetActivity.*/authViewModel.connectionExceptionMessage.isNotEmpty() -> {
-        Text(text = /*targetActivity.*/authViewModel.connectionExceptionMessage)
-    }
+        targetActivity.authViewModel.connectionExceptionMessage.isNotEmpty() -> {
+            Text(text = targetActivity.authViewModel.connectionExceptionMessage)
+        }
 
         hasUserLoggedIn() -> {
             Column {
                 val user = Firebase.auth.currentUser
                 Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
-                Button(onClick = /*targetActivity.*/authViewModel::logUserOut) {
+                Button(onClick = targetActivity.authViewModel::logUserOut) {
                     Text(text = "Sign out")
                 }
             }
         }
 
-        /*targetActivity.*/authViewModel.countriesAndDialCodes.isEmpty() -> {
-        Text("Khởi tạo")
-    }
+        targetActivity.authViewModel.countriesAndDialCodes.isEmpty() -> {
+            Text("Khởi tạo")
+        }
 
         else -> {
             when {
-                authState.verificationId.isEmpty() -> {
+                authHomeUIState.verificationId.isEmpty() -> {
                     var phoneNumber by rememberSaveable {
                         mutableStateOf("")
                     }
@@ -378,32 +388,32 @@ fun AuthActivity.AuthHomeScreen(
                     val kbController = LocalSoftwareKeyboardController.current
 
                     LoginWithPhoneNumberScreen(
-                        countryNamesAndDialCodes = /*targetActivity.*/authViewModel.countriesAndDialCodes,
-                        selectedCountry = savedSelectedCountryState,
+                        countryNamesAndDialCodes = targetActivity.authViewModel.countriesAndDialCodes,
+                        selectedCountryProvider = { savedSelectedCountryState },
                         onSelectedCountryChange = {
-                            /*targetActivity.*/authViewModel.saveSelectedCountry(it)
-                            if (hasException(authState.requestExceptionMessage)) /*targetActivity.*/ authViewModel.onRequestException(
+                            targetActivity.authViewModel.saveSelectedCountry(it)
+                            if (hasException(authRequestUIState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
                                 ""
                             )
                         },
-                        phoneNumber = phoneNumber,
+                        phoneNumberProvider = { phoneNumber },
                         onPhoneNumberChange = {
-                            if (hasException(authState.requestExceptionMessage)) /*targetActivity.*/ authViewModel.onRequestException(
+                            if (hasException(authRequestUIState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
                                 ""
                             )
                             phoneNumber = it
                         },
                         onDone = {
-                            if (savedSelectedCountryState.container.dialCode.isEmpty()) /*targetActivity.*/ authViewModel.onEmptyDialCode()
+                            if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
                             else phoneAuth.startPhoneNumberVerification(
                                 "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
-                                authState.resendingToken
+                                authHomeUIState.resendingToken
                             )
                             kbController?.hide()
                         },
-                        requestInProgress = authState.requestInProgress,
-                        exceptionMessage = authState.requestExceptionMessage,
-                        handleLocationPermissionRequest = /*targetActivity*/::handleLocationPermissionRequest
+                        requestInProgressProvider = { authRequestUIState.requestInProgress },
+                        exceptionMessageProvider = { authRequestUIState.requestExceptionMessage },
+                        handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest
                     )
                 }
 
@@ -413,15 +423,15 @@ fun AuthActivity.AuthHomeScreen(
                     }
 
                     remember {
-                        /*targetActivity.*/authViewModel.clearSnackbar()
-                        /*targetActivity.*/authViewModel.cancelPendingActiveListener()
+                        targetActivity.authViewModel.clearSnackbar()
+                        targetActivity.authViewModel.cancelPendingActiveListener()
                     }
 
                     VerifyCodeScreen(
-                        codeToVerify = codeToVerify,
+                        codeToVerifyProvider = { codeToVerify },
                         onCodeChange = {
                             if (it.length <= VERIFICATION_CODE_LENGTH) {
-                                if (hasException(authState.verificationExceptionMessage)) /*targetActivity.*/ authViewModel.onVerificationException(
+                                if (hasException(authVerificationUIState.verificationExceptionMessage)) targetActivity.authViewModel.onVerificationException(
                                     ""
                                 )
 
@@ -431,35 +441,51 @@ fun AuthActivity.AuthHomeScreen(
 
                             if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
                                 phoneAuth.onReceiveCodeToVerify(
-                                    authState.verificationId, codeToVerify
+                                    authHomeUIState.verificationId, codeToVerify
                                 )
                             }
                         },
-                        exceptionMessage = authState.verificationExceptionMessage,
-                        verificationInProgress = authState.verificationInProgress,
+                        exceptionMessageProvider = { authVerificationUIState.verificationExceptionMessage },
+                        verificationInProgressProvider = { authVerificationUIState.verificationInProgress },
                     )
                 }
             }
         }
     }
+
+    if (authHomeUIState.snackbarMsg.isNotEmpty()) {
+        val kbController = LocalSoftwareKeyboardController.current
+        kbController?.hide()
+        LaunchedEffect(authHomeUIState.snackbarMsg) {
+            scaffoldState.snackbarHostState.showSnackbar(
+                authHomeUIState.snackbarMsg,
+                duration = SnackbarDuration.Indefinite
+            )
+        }
+    } else scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LoginWithPhoneNumberScreen(
     countryNamesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode>,
-    selectedCountry: SelectedCountry,
+    selectedCountryProvider: () -> SelectedCountry,
     onSelectedCountryChange: (CountryNamesAndDialCodes.NameAndDialCode) -> Unit,
-    phoneNumber: String,
+    phoneNumberProvider: () -> String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: () -> Unit,
-    requestInProgress: Boolean,
-    exceptionMessage: String?,
+    requestInProgressProvider: () -> Boolean,
+    exceptionMessageProvider: () -> String,
     handleLocationPermissionRequest: () -> Unit
 ) {
     Surface(
         color = MaterialTheme.colors.background, modifier = Modifier.fillMaxWidth()
     ) {
+        val selectedCountry = selectedCountryProvider()
+        val phoneNumber = phoneNumberProvider()
+        val requestInProgress = requestInProgressProvider()
+        val exceptionMessage = exceptionMessageProvider()
+
         var expanded by rememberSaveable {
             mutableStateOf(false)
         }
@@ -673,12 +699,15 @@ const val VERIFICATION_CODE_LENGTH = 6
 
 @Composable
 fun VerifyCodeScreen(
-    codeToVerify: String,
+    codeToVerifyProvider: () -> String,
     onCodeChange: (String) -> Unit,
-    exceptionMessage: String? = null,
-    verificationInProgress: Boolean,
+    exceptionMessageProvider: () -> String,
+    verificationInProgressProvider: () -> Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val codeToVerify = codeToVerifyProvider()
+    val exceptionMessage = exceptionMessageProvider()
+    val verificationInProgress = verificationInProgressProvider()
     Column(
         modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -744,13 +773,13 @@ fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
         LoginWithPhoneNumberScreen(
             listOf(),
-            SelectedCountry.getDefaultInstance(),
+            { SelectedCountry.getDefaultInstance() },
             {},
-            "",
+            { "" },
             {},
             {},
-            false,
-            null,
+            { false },
+            { "" },
             {}
         )
     }
@@ -760,7 +789,7 @@ fun LoginWithPasswordScreenPreview() {
 @Composable
 fun VerifyCodeScreenPreview() {
     FirebaseAuthTheme {
-        VerifyCodeScreen("", {}, null, false)
+        VerifyCodeScreen({ "" }, {}, { "" }, { false })
     }
 }
 

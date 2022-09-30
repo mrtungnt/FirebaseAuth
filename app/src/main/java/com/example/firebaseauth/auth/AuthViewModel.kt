@@ -26,7 +26,7 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val countryNamesAndDialCodesRepository: CountryNamesAndDialCodesRepository,
     private val savedSelectedCountryRepository: SavedSelectedCountryRepository,
-    private val authState: AuthUIState,
+    val authState: AuthUIState,
     private val savedState: SavedStateHandle
 ) :
     ViewModel(), PhoneAuthNotification {
@@ -43,6 +43,12 @@ class AuthViewModel @Inject constructor(
     private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage
 
+    /*var authHomeUIState by mutableStateOf(authState.authHomeUIState)
+
+    var authRequestUIState by mutableStateOf(authState.authRequestUIState)
+
+    var authVerificationUIState by mutableStateOf(authState.authVerificationUIState)*/
+
     init {
         viewModelScope.launch {
             val r = countryNamesAndDialCodesRepository.getCountriesAndDialCodes()
@@ -52,30 +58,49 @@ class AuthViewModel @Inject constructor(
                 _connectionExceptionMessage = it.message!!
             }
         }
+
+/*
+        viewModelScope.launch {
+            authStateFlow.collect {
+                authRequestUIState = it.authRequestUIState
+                authVerificationUIState = it.authVerificationUIState
+                authHomeUIState = it.authHomeUIState
+            }
+        }
+*/
     }
 
     fun logUserOut() {
         Firebase.auth.signOut()
-        savedState[stateKeyName] = authState.copy(
-            userSignedIn = Firebase.auth.currentUser != null
-        )
+        val authState =
+            authState.copy(authHomeUIState = authState.authHomeUIState.copy(userSignedIn = Firebase.auth.currentUser != null))
+        savedState[stateKeyName] = authState
     }
 
     fun onEmptyDialCode() {
-        savedState[stateKeyName] = authStateFlow.value.copy(
+        val authRequestUIState = authStateFlow.value.authRequestUIState.copy(
             requestExceptionMessage = "Chưa chọn quốc gia"
+        )
+        savedState[stateKeyName] = authStateFlow.value.copy(
+            authRequestUIState = authRequestUIState
         )
     }
 
     override fun onSuccessfulLogin() {
-        savedState[stateKeyName] = authStateFlow.value.copy(
+        val authHomeUIState = authStateFlow.value.authHomeUIState.copy(
             userSignedIn = Firebase.auth.currentUser != null
+        )
+        savedState[stateKeyName] = authStateFlow.value.copy(
+            authHomeUIState = authHomeUIState
         )
     }
 
     override fun onVerificationException(exceptionMessage: String) {
-        savedState[stateKeyName] = authStateFlow.value.copy(
+        val authVerificationUIState = authStateFlow.value.authVerificationUIState.copy(
             verificationExceptionMessage = exceptionMessage
+        )
+        savedState[stateKeyName] = authStateFlow.value.copy(
+            authVerificationUIState = authVerificationUIState
         )
     }
 
@@ -83,27 +108,41 @@ class AuthViewModel @Inject constructor(
         verificationId: String,
         resendingToken: PhoneAuthProvider.ForceResendingToken
     ) {
+        val authHomeUIState =
+            authStateFlow.value.authHomeUIState.copy(
+                verificationId = verificationId,
+                resendingToken = resendingToken
+            )
         savedState[stateKeyName] = authStateFlow.value.copy(
-            verificationId = verificationId,
-            resendingToken = resendingToken
+            authHomeUIState = authHomeUIState
         )
     }
 
     override fun onRequestException(exceptionMessage: String) {
-        savedState[stateKeyName] = authStateFlow.value.copy(
+        val authRequestUIState = authStateFlow.value.authRequestUIState.copy(
             requestExceptionMessage = exceptionMessage
+        )
+        savedState[stateKeyName] = authStateFlow.value.copy(
+            authRequestUIState = authRequestUIState
         )
     }
 
     override fun onVerificationInProgress(inProgress: Boolean) {
-        savedState[stateKeyName] = authStateFlow.value.copy(
+        val authVerificationUIState = authStateFlow.value.authVerificationUIState.copy(
             verificationInProgress = inProgress
+
+        )
+        savedState[stateKeyName] = authStateFlow.value.copy(
+            authVerificationUIState = authVerificationUIState
         )
     }
 
     override fun onRequestInProgress(inProgress: Boolean) {
-        savedState[stateKeyName] = authStateFlow.value.copy(
+        val authRequestUIState = authStateFlow.value.authRequestUIState.copy(
             requestInProgress = inProgress
+        )
+        savedState[stateKeyName] = authStateFlow.value.copy(
+            authRequestUIState = authRequestUIState
         )
     }
 
@@ -125,18 +164,23 @@ class AuthViewModel @Inject constructor(
     }
 
     fun clearSnackbar() {
-        if (authStateFlow.value.snackbarMsg.isNotEmpty())
-            savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = "")
+        if (authStateFlow.value.authHomeUIState.snackbarMsg.isNotEmpty()) {
+            val authHomeUIState = authStateFlow.value.authHomeUIState.copy(snackbarMsg = "")
+            savedState[stateKeyName] = authStateFlow.value.copy(authHomeUIState = authHomeUIState)
+        }
     }
 
     fun updateSnackbar(message: String, infinite: Boolean = false) {
         if (!infinite && message.isNotEmpty()) {
             viewModelScope.launch(Dispatchers.Default) {
                 delay(4000L)
-                savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = "")
+                val authHomeUIState = authStateFlow.value.authHomeUIState.copy(snackbarMsg = "")
+                savedState[stateKeyName] =
+                    authStateFlow.value.copy(authHomeUIState = authHomeUIState)
             }
         }
-        savedState[stateKeyName] = authStateFlow.value.copy(snackbarMsg = message)
+        val authHomeUIState = authStateFlow.value.authHomeUIState.copy(snackbarMsg = message)
+        savedState[stateKeyName] = authStateFlow.value.copy(authHomeUIState = authHomeUIState)
     }
 
     var locationTask: Task<Location>? = null
