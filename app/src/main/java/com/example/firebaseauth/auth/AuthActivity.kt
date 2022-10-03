@@ -31,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -97,8 +99,7 @@ class AuthActivity : ComponentActivity() {
             if (activityResult.resultCode == RESULT_OK) {
                 Log.d("intentSenderForResult", "Location setting: On now")
                 whenLocationReady()
-            } else
-                Log.d("ResolutionForResult", "resultCode: ${activityResult.resultCode}")
+            } else Log.d("ResolutionForResult", "resultCode: ${activityResult.resultCode}")
         }
 
     fun handleLocationPermissionRequest() {
@@ -138,9 +139,7 @@ class AuthActivity : ComponentActivity() {
         return withContext(context = authViewModel.viewModelScope.coroutineContext + Dispatchers.IO) {
             try {
                 Geocoder(applicationContext).getFromLocation(
-                    location.latitude,
-                    location.longitude,
-                    1
+                    location.latitude, location.longitude, 1
                 )
             } catch (exc: java.lang.Exception) {
                 Log.e("Location", "${exc.message}")
@@ -151,12 +150,10 @@ class AuthActivity : ComponentActivity() {
 
     private fun whenLocationReady() {
         authViewModel.updateSnackbar(
-            "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể mất 30 giây.",
-            true
+            "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể mất 30 giây.", true
         )
         authViewModel.locationTask = fusedLocationClient.getCurrentLocation(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            authViewModel.locationCancellationToken
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY, authViewModel.locationCancellationToken
         )
         authViewModel.locationTask?.addOnSuccessListener {
             if (it != null) {
@@ -174,15 +171,14 @@ class AuthActivity : ComponentActivity() {
         }
         authViewModel.locationTask?.addOnFailureListener {
             Log.e(
-                "Location",
-                "msg: ${it.message}"
+                "Location", "msg: ${it.message}"
             )
         }
     }
 
     private fun whenLocationPermissionGranted() {
-        val locationSettingsRequestBuilder = LocationSettingsRequest.Builder()
-            .addLocationRequest(LocationRequest.create())
+        val locationSettingsRequestBuilder =
+            LocationSettingsRequest.Builder().addLocationRequest(LocationRequest.create())
         val settingsClient: SettingsClient = LocationServices.getSettingsClient(this)
         val taskLocationSettingsResponse: Task<LocationSettingsResponse> =
             settingsClient.checkLocationSettings(locationSettingsRequestBuilder.build())
@@ -192,8 +188,7 @@ class AuthActivity : ComponentActivity() {
         }
         taskLocationSettingsResponse.addOnFailureListener {
             Log.e(
-                "LocationSettingsResponse",
-                "value: $it"
+                "LocationSettingsResponse", "value: $it"
             )
             if (it is ResolvableApiException) {
                 // Location settings are not satisfied, but this can be fixed
@@ -218,8 +213,7 @@ class AuthActivity : ComponentActivity() {
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
                     Log.e(
-                        "SendIntent",
-                        "msg: ${it.message}"
+                        "SendIntent", "msg: ${it.message}"
                     )
                 }
             }
@@ -230,39 +224,37 @@ class AuthActivity : ComponentActivity() {
 
     var isConnected by mutableStateOf(false)
 
-    val callbacks =
-        object : CallbacksFromPhoneAuthToHost() {
-            override fun onCodeSent(
-                verificationId: String,
-                resendingToken: PhoneAuthProvider.ForceResendingToken
-            ) {
-                authViewModel.onCodeSent(verificationId, resendingToken)
-            }
-
-            override fun onSuccessfulLogin() {
-                authViewModel.onSuccessfulLogin()
-            }
-
-            override fun onRequestException(exceptionMessage: String) {
-                authViewModel.onRequestException(exceptionMessage)
-            }
-
-            override fun onVerificationException(exceptionMessage: String) {
-                authViewModel.onVerificationException(exceptionMessage)
-            }
-
-            override fun onVerificationInProgress(inProgress: Boolean) {
-                authViewModel.onVerificationInProgress(inProgress)
-            }
-
-            override fun onRequestInProgress(inProgress: Boolean) {
-                authViewModel.onRequestInProgress(inProgress)
-            }
-
-            /*override fun onLoggingProgress(progress: Boolean) {
-                TODO("Not yet implemented")
-            }*/
+    val callbacks = object : CallbacksFromPhoneAuthToHost() {
+        override fun onCodeSent(
+            verificationId: String, resendingToken: PhoneAuthProvider.ForceResendingToken
+        ) {
+            authViewModel.onCodeSent(verificationId, resendingToken)
         }
+
+        override fun onSuccessfulLogin() {
+            authViewModel.onSuccessfulLogin()
+        }
+
+        override fun onRequestException(exceptionMessage: String) {
+            authViewModel.onRequestException(exceptionMessage)
+        }
+
+        override fun onVerificationException(exceptionMessage: String) {
+            authViewModel.onVerificationException(exceptionMessage)
+        }
+
+        override fun onVerificationInProgress(inProgress: Boolean) {
+            authViewModel.onVerificationInProgress(inProgress)
+        }
+
+        override fun onRequestInProgress(inProgress: Boolean) {
+            authViewModel.onRequestInProgress(inProgress)
+        }
+
+        /*override fun onLoggingProgress(progress: Boolean) {
+            TODO("Not yet implemented")
+        }*/
+    }
 
     val phoneAuth = PhoneAuth(
         activity = this@AuthActivity,
@@ -272,20 +264,16 @@ class AuthActivity : ComponentActivity() {
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val connMgr =
-            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         connMgr.registerNetworkCallback(
-            NetworkRequest.Builder().build(),
-            NetworkCallbackExt(this)
+            NetworkRequest.Builder().build(), NetworkCallbackExt(this)
         )
 
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setContent {
-            if (isConnected)
-                HomeContent()
-            else
-                NoConnectionDisplay()
+            if (isConnected) HomeContent()
+            else NoConnectionDisplay()
         }
     }
 }
@@ -295,8 +283,7 @@ class AuthActivity : ComponentActivity() {
 fun AuthActivity.HomeContent() {
     FirebaseAuthTheme {
         val scaffoldState = rememberScaffoldState()
-        Scaffold(scaffoldState = scaffoldState)
-        {
+        Scaffold(scaffoldState = scaffoldState) {
             /*val authViewModel = viewModel<AuthViewModel>()
             Log.d(
                 "authViewModel",
@@ -308,10 +295,9 @@ fun AuthActivity.HomeContent() {
                 modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
             ) {
                 AuthHomeScreen(
-                    authViewModel,
                     scaffoldState,
                     phoneAuth,
-                    { authViewModel.authStateFlow },
+                    authViewModel.authStateFlow,
                     this,
                 )
             }
@@ -327,30 +313,29 @@ fun NoConnectionDisplay() {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AuthHomeScreen(
-    viewModel: AuthViewModel = viewModel(),
     scaffoldState: ScaffoldState,
     phoneAuth: PhoneAuth,
-    authUIStateFlowProvider: () -> StateFlow<AuthUIState>,
+    authUIStateFlow: StateFlow<AuthUIState>,
     targetActivity: AuthActivity,
 ) {
     val savedSelectedCountryState by targetActivity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
     )
 
-    var authHomeUIState by rememberSaveable {
-        mutableStateOf(viewModel.authState.authHomeUIState)
+    var authHomeUIState by remember {
+        mutableStateOf(targetActivity.authViewModel.authState.authHomeUIState)
     }
 
-    var authRequestUIState by rememberSaveable {
-        mutableStateOf(viewModel.authState.authRequestUIState)
+    var authRequestUIState by remember {
+        mutableStateOf(targetActivity.authViewModel.authState.authRequestUIState)
     }
 
-    var authVerificationUIState by rememberSaveable {
-        mutableStateOf(viewModel.authState.authVerificationUIState)
+    var authVerificationUIState by remember {
+        mutableStateOf(targetActivity.authViewModel.authState.authVerificationUIState)
     }
 
     LaunchedEffect(key1 = Unit) {
-        authUIStateFlowProvider().collect {
+        authUIStateFlow.collect {
             authHomeUIState = it.authHomeUIState
             authRequestUIState = it.authRequestUIState
             authVerificationUIState = it.authVerificationUIState
@@ -404,16 +389,19 @@ fun AuthHomeScreen(
                             phoneNumber = it
                         },
                         onDone = {
-                            if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
+                            /*if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
                             else phoneAuth.startPhoneNumberVerification(
                                 "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authHomeUIState.resendingToken
-                            )
+                            )*/
+                            targetActivity.authViewModel.onRequestInProgress(true)
                             kbController?.hide()
                         },
                         requestInProgressProvider = { authRequestUIState.requestInProgress },
                         exceptionMessageProvider = { authRequestUIState.requestExceptionMessage },
-                        handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest
+                        handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest,
+                        onRetry = targetActivity.authViewModel::logUserOut,
+                        scaffoldState = scaffoldState
                     )
                 }
 
@@ -458,8 +446,7 @@ fun AuthHomeScreen(
         kbController?.hide()
         LaunchedEffect(authHomeUIState.snackbarMsg) {
             scaffoldState.snackbarHostState.showSnackbar(
-                authHomeUIState.snackbarMsg,
-                duration = SnackbarDuration.Indefinite
+                authHomeUIState.snackbarMsg, duration = SnackbarDuration.Indefinite
             )
         }
     } else scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
@@ -476,7 +463,9 @@ fun LoginWithPhoneNumberScreen(
     onDone: () -> Unit,
     requestInProgressProvider: () -> Boolean,
     exceptionMessageProvider: () -> String,
-    handleLocationPermissionRequest: () -> Unit
+    handleLocationPermissionRequest: () -> Unit,
+    onRetry: () -> Unit,
+    scaffoldState: ScaffoldState
 ) {
     Surface(
         color = MaterialTheme.colors.background, modifier = Modifier.fillMaxWidth()
@@ -506,142 +495,194 @@ fun LoginWithPhoneNumberScreen(
         }
 
         val horizontalCenterColumnWidth = 280.dp
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(horizontalCenterColumnWidth)
-            ) {
-                /*Image(
+
+        Box {
+            @Composable
+            fun primaryComponent() {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(horizontalCenterColumnWidth)
+                ) {
+                    /*Image(
                     painter = painterResource(id = R.drawable.logo),
                     null,
                     modifier = Modifier.padding(top = 50.dp)
                 )*/
 
-                ForkedExposedDropdownMenuBox(expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
-                    modifier = Modifier
-                        .onFocusChanged {
-                            if (!it.isFocused) if (selectedCountryName != selectedCountry.container.name) selectedCountryName =
-                                selectedCountry.container.name
-                        }
-                        .padding(top = 30.dp)
+                    ForkedExposedDropdownMenuBox(expanded = expanded,
+                        onExpandedChange = { expanded = !expanded },
+                        modifier = Modifier
+                            .onFocusChanged {
+                                if (!it.isFocused) if (selectedCountryName != selectedCountry.container.name) selectedCountryName =
+                                    selectedCountry.container.name
+                            }
+                            .padding(top = 30.dp)
 
-                ) {
-                    TextField(
-                        value = selectedCountryName,
-                        onValueChange = { selectedCountryName = it },
-                        label = { Text(text = "Quốc gia") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(
-                                expanded = expanded
-                            )
-                        },
-                        colors = ExposedDropdownMenuDefaults.textFieldColors(),
-                        singleLine = true,
-                    )
-                    val filter = countryNamesAndDialCodes.filter {
-                        it.name.contains(
-                            selectedCountryName, ignoreCase = true
+                    ) {
+                        TextField(
+                            value = selectedCountryName,
+                            onValueChange = { selectedCountryName = it },
+                            label = { Text(text = "Quốc gia") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(
+                                    expanded = expanded
+                                )
+                            },
+                            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                            singleLine = true,
                         )
-                    }
-                    if (filter.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                            modifier = Modifier
-                        ) {
-                            LazyColumn {
-                                items(filter) {
-                                    DropdownMenuItem(onClick = {
-                                        selectedCountryName = it.name
-                                        onSelectedCountryChange(it)
-                                        expanded = false
-                                    }) {
-                                        Text(text = it.name)
+                        val filter = countryNamesAndDialCodes.filter {
+                            it.name.contains(
+                                selectedCountryName, ignoreCase = true
+                            )
+                        }
+                        if (filter.isNotEmpty()) {
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier
+                            ) {
+                                LazyColumn {
+                                    items(filter) {
+                                        DropdownMenuItem(onClick = {
+                                            selectedCountryName = it.name
+                                            onSelectedCountryChange(it)
+                                            expanded = false
+                                        }) {
+                                            Text(text = it.name)
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                Button(
-                    modifier = Modifier.padding(top = 18.dp),
-                    onClick = handleLocationPermissionRequest
-                ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
+                    Button(
+                        modifier = Modifier.padding(top = 18.dp),
+                        onClick = handleLocationPermissionRequest
+                    ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
 
-                Row(modifier = Modifier.padding(top = 10.dp)) {
-                    OutlinedTextField(
-                        modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
-                            (horizontalCenterColumnWidth.toPx() * .44).toInt()
-                        }),
-                        value = selectedCountry.container.dialCode,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(text = "Mã đt QG (*)") },
-                    )
-                    OutlinedTextField(
-                        modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
-                            (horizontalCenterColumnWidth.toPx() * .56).toInt()
-                        }),
-                        value = phoneNumber,
-                        onValueChange = onPhoneNumberChange,
-                        singleLine = true,
-                        label = {
-                            Text(
-                                text = "Số điện thoại"
-                            )
-                        },
-                        keyboardActions = KeyboardActions(onDone = { onDone() }),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
-                        ),
-                    )
+                    Row(modifier = Modifier.padding(top = 10.dp)) {
+                        OutlinedTextField(
+                            modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
+                                (horizontalCenterColumnWidth.toPx() * .44).toInt()
+                            }),
+                            value = selectedCountry.container.dialCode,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(text = "Mã đt QG (*)") },
+                        )
+                        OutlinedTextField(
+                            modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
+                                (horizontalCenterColumnWidth.toPx() * .56).toInt()
+                            }),
+                            value = phoneNumber,
+                            onValueChange = onPhoneNumberChange,
+                            singleLine = true,
+                            label = {
+                                Text(
+                                    text = "Số điện thoại"
+                                )
+                            },
+                            keyboardActions = KeyboardActions(onDone = { onDone() }),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
+                            ),
+                        )
+                    }
                 }
             }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
 
-            if (hasException(exceptionMessage)) {
-                ExceptionShowBox(exceptionMessage = exceptionMessage!!)
-            } else if (requestInProgress) {
+                primaryComponent()
+
+                if (hasException(exceptionMessage)) {
+                    ExceptionShowBox(exceptionMessage = exceptionMessage!!)
+                } else if (!requestInProgress) {
+                    val guidance = remember {
+                        "(*) Người dùng không phải nhập trực tiếp mã điện thoại quốc gia, " + "mà chọn quốc gia phát hành sim số điện thoại đã dùng để đăng ký."
+                    }
+                    Column(
+                        modifier = Modifier.width(horizontalCenterColumnWidth),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Button(
+                            onClick = onDone,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 24.dp)
+                        ) { Text(text = "Xong") }
+
+                        Text(
+                            text = guidance,
+//                        textAlign = TextAlign.Justify,
+                            modifier = Modifier.padding(top = 50.dp)
+                        )
+                    }
+                }
+            }
+            val vm = viewModel<AuthViewModel>()
+            if (requestInProgress) {
                 var message by rememberSaveable {
                     mutableStateOf("Chờ mã xác minh")
                 }
                 LaunchedEffect(key1 = phoneNumber) {
-                    delay(10000)
-                    message = "Thời gian đợi hơi lâu."
+                    delay(3000)
+                    val result = scaffoldState.snackbarHostState.showSnackbar(
+                        "Thời gian phản hồi lâu hơn dự kiến.",
+                        "Đăng nhập khác?",
+                        SnackbarDuration.Indefinite
+                    )
+                    Log.d("RequestTimeout", "LoginWithPhoneNumberScreen: ")
+                    if (result == SnackbarResult.ActionPerformed) {
+                        onRetry()
+                    }
+//                    vm.updateSnackbar("Timeout", true)
                 }
-                Column(
-                    Modifier
-                        .padding(top = 18.dp)
-                        .width(IntrinsicSize.Max)
+                Surface(
+                    color = Color.Transparent.copy(0.37f),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    @Composable
+                    fun subComponent() {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp)
+                                .padding(top = 8.dp, bottom = 8.dp),
+                            elevation = 2.dp,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Column(
+                                Modifier
+                                    .padding(10.dp)
+                                    .width(IntrinsicSize.Max)
+                                    .align(Alignment.Center)
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
-                    Text(
-                        text = message,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-                }
-            } else {
-                val guidance = remember {
-                    "(*) Người dùng không phải nhập trực tiếp mã điện thoại quốc gia, " +
-                            "mà chọn quốc gia phát hành sim số điện thoại đã dùng để đăng ký."
-                }
-                Column(modifier = Modifier.width(horizontalCenterColumnWidth)) {
-                    Button(
-                        onClick = onDone,
-                        modifier = Modifier
-//                            .width(horizontalCenterColumnWidth)
-                            .fillMaxWidth()
-                            .padding(top = 24.dp)
-                    ) { Text(text = "Xong") }
+                                Text(
+                                    text = message,
+                                    modifier = Modifier
+                                        .padding(top = 10.dp)
+                                        .align(Alignment.CenterHorizontally)
+                                )
+                            }
+                        }
+                    }
+                    SubcomposeLayout() { constraints ->
+                        val placeables =
+                            subcompose(0) { primaryComponent() }.map { it.measure(constraints) }
 
-                    Text(
-                        text = guidance,
-//                        textAlign = TextAlign.Justify,
-                        modifier = Modifier.padding(top = 50.dp)
-                    )
+                        layout(constraints.maxWidth, constraints.maxHeight) {
+                            subcompose(1) { subComponent() }.forEach {
+                                it.measure(constraints).placeRelative(0, placeables[0].height)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -780,7 +821,9 @@ fun LoginWithPasswordScreenPreview() {
             {},
             { false },
             { "" },
-            {}
+            {},
+            {},
+            rememberScaffoldState(),
         )
     }
 }
