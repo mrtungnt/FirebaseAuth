@@ -2,6 +2,7 @@ package com.example.firebaseauth.auth
 
 import android.location.Location
 import android.util.Log
+import androidx.compose.material.SnackbarDuration
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,9 +18,8 @@ import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -163,31 +163,29 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun clearSnackbar() {
-        if (authStateFlow.value.authHomeUIState.snackbarMsg.isNotEmpty()) {
-            val authHomeUIState = authStateFlow.value.authHomeUIState.copy(snackbarMsg = "")
-            savedState[stateKeyName] = authStateFlow.value.copy(authHomeUIState = authHomeUIState)
-        }
+    fun dismissSnackbar() {
+        var snackbarUIState =
+            authStateFlow.value.snackbarUIState.copy(isDismissed = true)
+        savedState[stateKeyName] = authStateFlow.value.copy(snackbarUIState = snackbarUIState)
+         snackbarUIState =
+            authStateFlow.value.snackbarUIState.copy(message = "", isDismissed = false)
+        savedState[stateKeyName] = authStateFlow.value.copy(snackbarUIState = snackbarUIState)
     }
 
-    fun updateSnackbar(message: String, infinite: Boolean = false) {
-        if (!infinite && message.isNotEmpty()) {
-            viewModelScope.launch(Dispatchers.Default) {
-                delay(4000L)
-                val authHomeUIState = authStateFlow.value.authHomeUIState.copy(snackbarMsg = "")
-                savedState[stateKeyName] =
-                    authStateFlow.value.copy(authHomeUIState = authHomeUIState)
-            }
-        }
-        val authHomeUIState = authStateFlow.value.authHomeUIState.copy(snackbarMsg = message)
-        savedState[stateKeyName] = authStateFlow.value.copy(authHomeUIState = authHomeUIState)
+    fun updateSnackbar(message: String, duration: SnackbarDuration = SnackbarDuration.Long) {
+        val snackbarUIState = authStateFlow.value.snackbarUIState.copy(
+            message = message,
+            duration = duration,
+            isDismissed = false
+        )
+        savedState[stateKeyName] = authStateFlow.value.copy(snackbarUIState = snackbarUIState)
     }
 
     var locationTask: Task<Location>? = null
     private var locationCancellationTokenSource = CancellationTokenSource()
     var locationCancellationToken = locationCancellationTokenSource.token
     fun cancelPendingActiveListener() {
-        Log.d(
+        Timber.d(
             "locationTask",
             "in cancelPendingActiveListener() -isSuccessful: ${locationTask?.isSuccessful ?: "null"} " +
                     "-isComplete ${locationTask?.isComplete ?: "null"}"

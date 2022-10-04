@@ -1,6 +1,7 @@
 package com.example.firebaseauth.di
 
 import android.content.Context
+import androidx.compose.material.SnackbarDuration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
@@ -34,8 +35,11 @@ object Modules {
     fun providesAuthHomeUIState(): AuthUIState.AuthHomeUIState = AuthUIState.AuthHomeUIState(
         "", PhoneAuthProvider.ForceResendingToken.zza(),
         Firebase.auth.currentUser != null,
-        "",
     )
+
+    @Singleton
+    @Provides
+    fun providesSnackbarUIState(): AuthUIState.SnackbarUIState = AuthUIState.SnackbarUIState("",SnackbarDuration.Long,false)
 
     @Singleton
     @Provides

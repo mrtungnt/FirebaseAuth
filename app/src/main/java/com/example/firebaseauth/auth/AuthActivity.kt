@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
@@ -150,7 +149,8 @@ class AuthActivity : ComponentActivity() {
 
     private fun whenLocationReady() {
         authViewModel.updateSnackbar(
-            "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể mất 30 giây.", true
+            "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể mất 30 giây.",
+            SnackbarDuration.Indefinite
         )
         authViewModel.locationTask = fusedLocationClient.getCurrentLocation(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY, authViewModel.locationCancellationToken
@@ -205,11 +205,6 @@ class AuthActivity : ComponentActivity() {
                                 .setFlags(0, 0)*/.build()
                         )
                     }
-
-                    /*it.startResolutionForResult(
-                        this,
-                        it.statusCode
-                    )*/
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
                     Log.e(
@@ -224,7 +219,7 @@ class AuthActivity : ComponentActivity() {
 
     var isConnected by mutableStateOf(false)
 
-    val callbacks = object : CallbacksFromPhoneAuthToHost() {
+    private val callbacks = object : CallbacksFromPhoneAuthToHost() {
         override fun onCodeSent(
             verificationId: String, resendingToken: PhoneAuthProvider.ForceResendingToken
         ) {
@@ -326,6 +321,10 @@ fun AuthHomeScreen(
         mutableStateOf(targetActivity.authViewModel.authState.authHomeUIState)
     }
 
+    var snackbarUIState by remember {
+        mutableStateOf(targetActivity.authViewModel.authState.snackbarUIState)
+    }
+
     var authRequestUIState by remember {
         mutableStateOf(targetActivity.authViewModel.authState.authRequestUIState)
     }
@@ -337,6 +336,7 @@ fun AuthHomeScreen(
     LaunchedEffect(key1 = Unit) {
         authUIStateFlow.collect {
             authHomeUIState = it.authHomeUIState
+            snackbarUIState = it.snackbarUIState
             authRequestUIState = it.authRequestUIState
             authVerificationUIState = it.authVerificationUIState
         }
@@ -400,6 +400,8 @@ fun AuthHomeScreen(
                         requestInProgressProvider = { authRequestUIState.requestInProgress },
                         exceptionMessageProvider = { authRequestUIState.requestExceptionMessage },
                         handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest,
+                        dismissPreviousSnackbar = targetActivity.authViewModel::dismissSnackbar,
+                        cancelPendingActiveListener = targetActivity.authViewModel::cancelPendingActiveListener,
                         onRetry = targetActivity.authViewModel::logUserOut,
                         scaffoldState = scaffoldState
                     )
@@ -411,7 +413,7 @@ fun AuthHomeScreen(
                     }
 
                     remember {
-                        targetActivity.authViewModel.clearSnackbar()
+                        targetActivity.authViewModel.dismissSnackbar()
                         targetActivity.authViewModel.cancelPendingActiveListener()
                     }
 
@@ -441,15 +443,17 @@ fun AuthHomeScreen(
         }
     }
 
-    if (authHomeUIState.snackbarMsg.isNotEmpty()) {
+    if (snackbarUIState.isDismissed) {
+        scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
+    } else if (snackbarUIState.message.isNotEmpty()) {
         val kbController = LocalSoftwareKeyboardController.current
         kbController?.hide()
-        LaunchedEffect(authHomeUIState.snackbarMsg) {
+        LaunchedEffect(snackbarUIState.message) {
             scaffoldState.snackbarHostState.showSnackbar(
-                authHomeUIState.snackbarMsg, duration = SnackbarDuration.Indefinite
+                snackbarUIState.message, duration = snackbarUIState.duration
             )
         }
-    } else scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -464,6 +468,8 @@ fun LoginWithPhoneNumberScreen(
     requestInProgressProvider: () -> Boolean,
     exceptionMessageProvider: () -> String,
     handleLocationPermissionRequest: () -> Unit,
+    dismissPreviousSnackbar: () -> Unit,
+    cancelPendingActiveListener: () -> Unit,
     onRetry: () -> Unit,
     scaffoldState: ScaffoldState
 ) {
@@ -531,6 +537,7 @@ fun LoginWithPhoneNumberScreen(
                             colors = ExposedDropdownMenuDefaults.textFieldColors(),
                             singleLine = true,
                         )
+
                         val filter = countryNamesAndDialCodes.filter {
                             it.name.contains(
                                 selectedCountryName, ignoreCase = true
@@ -568,10 +575,12 @@ fun LoginWithPhoneNumberScreen(
                                 (horizontalCenterColumnWidth.toPx() * .44).toInt()
                             }),
                             value = selectedCountry.container.dialCode,
+                            enabled = false,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text(text = "Mã đt QG (*)") },
                         )
+
                         OutlinedTextField(
                             modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
                                 (horizontalCenterColumnWidth.toPx() * .56).toInt()
@@ -592,56 +601,42 @@ fun LoginWithPhoneNumberScreen(
                     }
                 }
             }
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.align(Alignment.TopCenter)
             ) {
-
                 primaryComponent()
-
                 if (hasException(exceptionMessage)) {
-                    ExceptionShowBox(exceptionMessage = exceptionMessage!!)
+                    ExceptionShowBox(exceptionMessage = exceptionMessage)
                 } else if (!requestInProgress) {
-                    val guidance = remember {
-                        "(*) Người dùng không phải nhập trực tiếp mã điện thoại quốc gia, " + "mà chọn quốc gia phát hành sim số điện thoại đã dùng để đăng ký."
-                    }
-                    Column(
-                        modifier = Modifier.width(horizontalCenterColumnWidth),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Button(
-                            onClick = onDone,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 24.dp)
-                        ) { Text(text = "Xong") }
-
-                        Text(
-                            text = guidance,
-//                        textAlign = TextAlign.Justify,
-                            modifier = Modifier.padding(top = 50.dp)
-                        )
-                    }
+                    Button(
+                        onClick = onDone,
+                        modifier = Modifier
+                            .width(horizontalCenterColumnWidth)
+                            .padding(top = 24.dp)
+                    ) { Text(text = "Xong") }
                 }
             }
-            val vm = viewModel<AuthViewModel>()
+
             if (requestInProgress) {
                 var message by rememberSaveable {
                     mutableStateOf("Chờ mã xác minh")
                 }
                 LaunchedEffect(key1 = phoneNumber) {
                     delay(3000)
+                    cancelPendingActiveListener()
+                    dismissPreviousSnackbar()
                     val result = scaffoldState.snackbarHostState.showSnackbar(
                         "Thời gian phản hồi lâu hơn dự kiến.",
-                        "Đăng nhập khác?",
+                        "Đăng nhập khác",
                         SnackbarDuration.Indefinite
                     )
-                    Log.d("RequestTimeout", "LoginWithPhoneNumberScreen: ")
                     if (result == SnackbarResult.ActionPerformed) {
                         onRetry()
                     }
-//                    vm.updateSnackbar("Timeout", true)
                 }
+
                 Surface(
                     color = Color.Transparent.copy(0.37f),
                     modifier = Modifier.fillMaxWidth(),
@@ -673,6 +668,7 @@ fun LoginWithPhoneNumberScreen(
                             }
                         }
                     }
+
                     SubcomposeLayout() { constraints ->
                         val placeables =
                             subcompose(0) { primaryComponent() }.map { it.measure(constraints) }
@@ -789,7 +785,7 @@ fun VerifyCodeScreen(
             }
         }
         if (hasException(exceptionMessage)) {
-            ExceptionShowBox(exceptionMessage = exceptionMessage!!)
+            ExceptionShowBox(exceptionMessage = exceptionMessage)
         } else if (verificationInProgress) {
             Column(
                 Modifier
@@ -823,6 +819,8 @@ fun LoginWithPasswordScreenPreview() {
             { "" },
             {},
             {},
+            {},
+            {},
             rememberScaffoldState(),
         )
     }
@@ -847,7 +845,7 @@ fun ExceptionShowBox(exceptionMessage: String) {
         elevation = 2.dp
     ) {
         Text(
-            text = exceptionMessage!!,
+            text = exceptionMessage,
             Modifier.padding(10.dp),
         )
     }
