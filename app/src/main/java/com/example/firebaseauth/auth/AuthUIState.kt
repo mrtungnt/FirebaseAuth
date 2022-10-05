@@ -24,9 +24,9 @@ data class AuthUIState @Inject constructor(
     data class SnackbarUIState @Inject constructor(
         var message: String,
         var duration: SnackbarDuration,
-        var isDismissed: Boolean
-    ) :
-        Parcelable
+        var isSnackbarDisplayingWhileRequestingAuthCode: Boolean,
+        var isSnackbarDisplayingWhileVerifyingAuthCode: Boolean,
+    ) : Parcelable
 
     @Parcelize
     data class AuthRequestUIState @Inject constructor(

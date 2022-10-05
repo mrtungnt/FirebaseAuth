@@ -3,6 +3,7 @@ package com.example.firebaseauth.auth
 import android.location.Location
 import android.util.Log
 import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -43,12 +44,6 @@ class AuthViewModel @Inject constructor(
     private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage
 
-    /*var authHomeUIState by mutableStateOf(authState.authHomeUIState)
-
-    var authRequestUIState by mutableStateOf(authState.authRequestUIState)
-
-    var authVerificationUIState by mutableStateOf(authState.authVerificationUIState)*/
-
     init {
         viewModelScope.launch {
             val r = countryNamesAndDialCodesRepository.getCountriesAndDialCodes()
@@ -58,17 +53,9 @@ class AuthViewModel @Inject constructor(
                 _connectionExceptionMessage = it.message!!
             }
         }
-
-/*
-        viewModelScope.launch {
-            authStateFlow.collect {
-                authRequestUIState = it.authRequestUIState
-                authVerificationUIState = it.authVerificationUIState
-                authHomeUIState = it.authHomeUIState
-            }
-        }
-*/
     }
+
+    val snackbarHostState = SnackbarHostState()
 
     fun logUserOut() {
         Firebase.auth.signOut()
@@ -164,19 +151,20 @@ class AuthViewModel @Inject constructor(
     }
 
     fun dismissSnackbar() {
-        var snackbarUIState =
-            authStateFlow.value.snackbarUIState.copy(isDismissed = true)
-        savedState[stateKeyName] = authStateFlow.value.copy(snackbarUIState = snackbarUIState)
-         snackbarUIState =
-            authStateFlow.value.snackbarUIState.copy(message = "", isDismissed = false)
-        savedState[stateKeyName] = authStateFlow.value.copy(snackbarUIState = snackbarUIState)
+        snackbarHostState.currentSnackbarData?.dismiss()
     }
 
-    fun updateSnackbar(message: String, duration: SnackbarDuration = SnackbarDuration.Long) {
+    fun updateSnackbar(
+        message: String = "",
+        duration: SnackbarDuration = SnackbarDuration.Long,
+        isSnackbarDisplayingWhileRequestingAuthCode: Boolean = false,
+        isSnackbarDisplayingWhileVerifyingAuthCode: Boolean = false,
+    ) {
         val snackbarUIState = authStateFlow.value.snackbarUIState.copy(
             message = message,
             duration = duration,
-            isDismissed = false
+            isSnackbarDisplayingWhileRequestingAuthCode = isSnackbarDisplayingWhileRequestingAuthCode,
+            isSnackbarDisplayingWhileVerifyingAuthCode = isSnackbarDisplayingWhileVerifyingAuthCode
         )
         savedState[stateKeyName] = authStateFlow.value.copy(snackbarUIState = snackbarUIState)
     }

@@ -39,7 +39,13 @@ object Modules {
 
     @Singleton
     @Provides
-    fun providesSnackbarUIState(): AuthUIState.SnackbarUIState = AuthUIState.SnackbarUIState("",SnackbarDuration.Long,false)
+    fun providesSnackbarUIState(): AuthUIState.SnackbarUIState =
+        AuthUIState.SnackbarUIState(
+            "",
+            SnackbarDuration.Long,
+            isSnackbarDisplayingWhileRequestingAuthCode = false,
+            false
+        )
 
     @Singleton
     @Provides

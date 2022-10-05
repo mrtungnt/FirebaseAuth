@@ -57,11 +57,9 @@ import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
@@ -277,14 +275,9 @@ class AuthActivity : ComponentActivity() {
 @Composable
 fun AuthActivity.HomeContent() {
     FirebaseAuthTheme {
-        val scaffoldState = rememberScaffoldState()
+        val scaffoldState =
+            rememberScaffoldState(snackbarHostState = authViewModel.snackbarHostState)
         Scaffold(scaffoldState = scaffoldState) {
-            /*val authViewModel = viewModel<AuthViewModel>()
-            Log.d(
-                "authViewModel",
-                "Singleton: ${authViewModel === this@AuthActivity.viewModel.value}"
-            )*/
-
             // A surface container using the 'background' color from the theme
             Surface(
                 modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
@@ -313,6 +306,8 @@ fun AuthHomeScreen(
     authUIStateFlow: StateFlow<AuthUIState>,
     targetActivity: AuthActivity,
 ) {
+    Timber.d("recomposed")
+
     val savedSelectedCountryState by targetActivity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
     )
@@ -364,13 +359,13 @@ fun AuthHomeScreen(
         }
 
         else -> {
+            val kbController = LocalSoftwareKeyboardController.current
+
             when {
                 authHomeUIState.verificationId.isEmpty() -> {
                     var phoneNumber by rememberSaveable {
                         mutableStateOf("")
                     }
-
-                    val kbController = LocalSoftwareKeyboardController.current
 
                     LoginWithPhoneNumberScreen(
                         countryNamesAndDialCodes = targetActivity.authViewModel.countriesAndDialCodes,
@@ -389,21 +384,26 @@ fun AuthHomeScreen(
                             phoneNumber = it
                         },
                         onDone = {
-                            /*if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
+                            if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
                             else phoneAuth.startPhoneNumberVerification(
                                 "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authHomeUIState.resendingToken
-                            )*/
-                            targetActivity.authViewModel.onRequestInProgress(true)
+                            )
                             kbController?.hide()
                         },
                         requestInProgressProvider = { authRequestUIState.requestInProgress },
                         exceptionMessageProvider = { authRequestUIState.requestExceptionMessage },
                         handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest,
+                        snackbarIsDisplayingProvider = { snackbarUIState.isSnackbarDisplayingWhileRequestingAuthCode },
+                        whenSnackbarIsDisplaying = {
+                            targetActivity.authViewModel.updateSnackbar(
+                                isSnackbarDisplayingWhileRequestingAuthCode = true
+                            )
+                        },
                         dismissPreviousSnackbar = targetActivity.authViewModel::dismissSnackbar,
                         cancelPendingActiveListener = targetActivity.authViewModel::cancelPendingActiveListener,
                         onRetry = targetActivity.authViewModel::logUserOut,
-                        scaffoldState = scaffoldState
+                        snackbarHostState = scaffoldState.snackbarHostState
                     )
                 }
 
@@ -433,27 +433,36 @@ fun AuthHomeScreen(
                                 phoneAuth.onReceiveCodeToVerify(
                                     authHomeUIState.verificationId, codeToVerify
                                 )
+                                kbController?.hide()
                             }
                         },
                         exceptionMessageProvider = { authVerificationUIState.verificationExceptionMessage },
                         verificationInProgressProvider = { authVerificationUIState.verificationInProgress },
+                        scaffoldState.snackbarHostState,
+                        snackbarIsDisplayingProvider = { snackbarUIState.isSnackbarDisplayingWhileVerifyingAuthCode },
+                        whenSnackbarIsDisplaying = {
+                            targetActivity.authViewModel.updateSnackbar(
+                                isSnackbarDisplayingWhileVerifyingAuthCode = true
+                            )
+                        },
+                        onRetry = { targetActivity.authViewModel.logUserOut() },
                     )
                 }
             }
         }
     }
 
-    if (snackbarUIState.isDismissed) {
-        scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
-    } else if (snackbarUIState.message.isNotEmpty()) {
+    if (snackbarUIState.message.isNotEmpty()) {
         val kbController = LocalSoftwareKeyboardController.current
         kbController?.hide()
+        Timber.d("snackbarUIState.message: ${snackbarUIState.message}")
         LaunchedEffect(snackbarUIState.message) {
             scaffoldState.snackbarHostState.showSnackbar(
                 snackbarUIState.message, duration = snackbarUIState.duration
             )
         }
-    }
+    } else
+        Timber.d("snackbarUIState.message is empty")
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -468,10 +477,12 @@ fun LoginWithPhoneNumberScreen(
     requestInProgressProvider: () -> Boolean,
     exceptionMessageProvider: () -> String,
     handleLocationPermissionRequest: () -> Unit,
+    snackbarIsDisplayingProvider: () -> Boolean,
+    whenSnackbarIsDisplaying: () -> Unit,
     dismissPreviousSnackbar: () -> Unit,
     cancelPendingActiveListener: () -> Unit,
     onRetry: () -> Unit,
-    scaffoldState: ScaffoldState
+    snackbarHostState: SnackbarHostState
 ) {
     Surface(
         color = MaterialTheme.colors.background, modifier = Modifier.fillMaxWidth()
@@ -620,22 +631,18 @@ fun LoginWithPhoneNumberScreen(
             }
 
             if (requestInProgress) {
-                var message by rememberSaveable {
-                    mutableStateOf("Chờ mã xác minh")
-                }
-                LaunchedEffect(key1 = phoneNumber) {
-                    delay(3000)
-                    cancelPendingActiveListener()
-                    dismissPreviousSnackbar()
-                    val result = scaffoldState.snackbarHostState.showSnackbar(
-                        "Thời gian phản hồi lâu hơn dự kiến.",
-                        "Đăng nhập khác",
-                        SnackbarDuration.Indefinite
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        onRetry()
+                val snackbarWasBeingShown = snackbarIsDisplayingProvider()
+                if (snackbarWasBeingShown) {
+                    LaunchedEffect(key1 = phoneNumber) {
+                        showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
                     }
-                }
+                } else
+                    LaunchedEffect(key1 = phoneNumber) {
+                        delay(TIME_THRESHOLD_FOR_RESPONSE)
+                        cancelPendingActiveListener()
+                        dismissPreviousSnackbar()
+                        showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
+                    }
 
                 Surface(
                     color = Color.Transparent.copy(0.37f),
@@ -660,7 +667,7 @@ fun LoginWithPhoneNumberScreen(
                                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
                                 Text(
-                                    text = message,
+                                    text = "Chờ mã xác minh",
                                     modifier = Modifier
                                         .padding(top = 10.dp)
                                         .align(Alignment.CenterHorizontally)
@@ -685,6 +692,24 @@ fun LoginWithPhoneNumberScreen(
     }
 }
 
+const val TIME_THRESHOLD_FOR_RESPONSE = 40000L
+
+suspend fun showNoticeAndRecommendation(
+    snackbarHostState: SnackbarHostState,
+    snackbarUIStateUpdate: () -> Unit,
+    doAsRecommended: () -> Unit
+) = coroutineScope {
+    snackbarUIStateUpdate()
+    val result = snackbarHostState.showSnackbar(
+        "Thời gian phản hồi lâu hơn dự kiến.",
+        "Đăng nhập khác",
+        SnackbarDuration.Indefinite
+    )
+    if (result == SnackbarResult.ActionPerformed) {
+        doAsRecommended()
+    }
+}
+
 fun constraintsWithNewMaxWidth(constraints: Constraints, newMaxWith: Int): Constraints =
     Constraints(
         minWidth = constraints.minWidth,
@@ -692,7 +717,6 @@ fun constraintsWithNewMaxWidth(constraints: Constraints, newMaxWith: Int): Const
         minHeight = constraints.minHeight,
         maxHeight = constraints.maxHeight
     )
-
 
 fun Modifier.layoutWithNewMaxWidth(newMaxWith: Int): Modifier = layout { measurable, constraints ->
     val component = measurable.measure(
@@ -740,65 +764,112 @@ fun VerifyCodeScreen(
     onCodeChange: (String) -> Unit,
     exceptionMessageProvider: () -> String,
     verificationInProgressProvider: () -> Boolean,
+    snackbarHostState: SnackbarHostState,
+    snackbarIsDisplayingProvider: () -> Boolean,
+    whenSnackbarIsDisplaying: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val codeToVerify = codeToVerifyProvider()
     val exceptionMessage = exceptionMessageProvider()
     val verificationInProgress = verificationInProgressProvider()
-    Column(
-        modifier = modifier.width(IntrinsicSize.Max),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            "Mã xác thực 6 số đã được gửi qua SMS.",
-            modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
-        )
-        TextField(value = codeToVerify,
-            onValueChange = onCodeChange,
-            textStyle = TextStyle(textAlign = TextAlign.Center),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number, imeAction = ImeAction.None
-            ),
-            label = {
+    Box {
+        @Composable
+        fun primaryComponent() {
+            Column(
+                modifier = modifier
+                    .width(IntrinsicSize.Max)
+                    .align(Alignment.TopCenter),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
-                    text = "Nhập mã xác thực",
-//                    style = TextStyle(textAlign = TextAlign.Center)
+                    "Mã xác thực 6 số đã được gửi qua SMS.",
+                    modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
                 )
-            })
-        Spacer(modifier = Modifier.height(10.dp))
-        Divider(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-        )
+                TextField(value = codeToVerify,
+                    onValueChange = onCodeChange,
+                    textStyle = TextStyle(textAlign = TextAlign.Center),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number, imeAction = ImeAction.None
+                    ),
+                    label = {
+                        Text(
+                            text = "Nhập mã xác thực",
+//                    style = TextStyle(textAlign = TextAlign.Center)
+                        )
+                    })
+                Spacer(modifier = Modifier.height(10.dp))
+                Divider(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                )
 //        Divider(Modifier.height(1.dp).background(Color.LightGray))
-        Spacer(
-            modifier = Modifier.height(5.dp)
-        )
-        Column(
-            modifier = modifier.width(IntrinsicSize.Max),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Button(onClick = { }, Modifier.fillMaxWidth()) {
-                Text(text = "Xác thực bằng số điện thoại khác")
+                /*Spacer(
+                    modifier = Modifier.height(5.dp)
+                )*/
+
+                if (hasException(exceptionMessage)) {
+                    ExceptionShowBox(exceptionMessage = exceptionMessage)
+                }
             }
         }
-        if (hasException(exceptionMessage)) {
-            ExceptionShowBox(exceptionMessage = exceptionMessage)
-        } else if (verificationInProgress) {
-            Column(
-                Modifier
-                    .padding(top = 18.dp)
-                    .width(IntrinsicSize.Max)
+        primaryComponent()
+
+        if (verificationInProgress) {
+            val snackbarWasBeingShown = snackbarIsDisplayingProvider()
+            if (snackbarWasBeingShown) {
+                LaunchedEffect(key1 = codeToVerify) {
+                    showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
+                }
+            } else LaunchedEffect(key1 = codeToVerify) {
+                delay(TIME_THRESHOLD_FOR_RESPONSE)
+                showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
+            }
+
+            Surface(
+                color = Color.Transparent.copy(0.37f),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                @Composable
+                fun subComponent() {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp)
+                            .padding(top = 8.dp, bottom = 8.dp),
+                        elevation = 2.dp,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Column(
+                            Modifier
+                                .padding(10.dp)
+                                .width(IntrinsicSize.Max)
+                                .align(Alignment.Center)
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
-                Text(
-                    text = "Đang xác thực",
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
+                            Text(
+                                text = "Đang xác thực",
+                                modifier = Modifier
+                                    .padding(top = 10.dp)
+                                    .align(Alignment.CenterHorizontally)
+                            )
+                        }
+                    }
+                }
+
+                SubcomposeLayout() { constraints ->
+                    val placeables =
+                        subcompose(0) { primaryComponent() }.map { it.measure(constraints) }
+
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        subcompose(1) { subComponent() }.forEach {
+                            it.measure(constraints).placeRelative(0, placeables[0].height)
+                        }
+                    }
+                }
             }
         }
     }
@@ -818,10 +889,12 @@ fun LoginWithPasswordScreenPreview() {
             { false },
             { "" },
             {},
+            { false },
             {},
             {},
             {},
-            rememberScaffoldState(),
+            {},
+            SnackbarHostState(),
         )
     }
 }
@@ -830,7 +903,7 @@ fun LoginWithPasswordScreenPreview() {
 @Composable
 fun VerifyCodeScreenPreview() {
     FirebaseAuthTheme {
-        VerifyCodeScreen({ "" }, {}, { "" }, { false })
+        VerifyCodeScreen({ "" }, {}, { "" }, { false },  SnackbarHostState(), { false }, {}, {})
     }
 }
 
