@@ -105,8 +105,8 @@ class AuthActivity : ComponentActivity() {
         )
         when {
             permissionCheck == PackageManager.PERMISSION_GRANTED -> {
-                Log.d(
-                    "ACCESS_COARSE_LOCATION", "Granted: yes $permissionCheck"
+                Timber.d(
+                    "ACCESS_COARSE_LOCATION Granted: yes"
                 )
                 whenLocationPermissionGranted()
             }
@@ -140,7 +140,7 @@ class AuthActivity : ComponentActivity() {
                 )
             } catch (exc: java.lang.Exception) {
                 Log.e("Location", "${exc.message}")
-                emptyList<Address>()
+                emptyList()
             }
         }
     }
@@ -163,14 +163,11 @@ class AuthActivity : ComponentActivity() {
                     }
                 }
             } else {
-                Log.d("Location", "is null")
                 authViewModel.updateSnackbar("Không xác định được vị trí.")
             }
         }
         authViewModel.locationTask?.addOnFailureListener {
-            Log.e(
-                "Location", "msg: ${it.message}"
-            )
+            authViewModel.updateSnackbar(message = it.message!!)
         }
     }
 
@@ -254,7 +251,6 @@ class AuthActivity : ComponentActivity() {
         callbacks,
     )
 
-    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -271,7 +267,6 @@ class AuthActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AuthActivity.HomeContent() {
     FirebaseAuthTheme {
@@ -306,8 +301,6 @@ fun AuthHomeScreen(
     authUIStateFlow: StateFlow<AuthUIState>,
     targetActivity: AuthActivity,
 ) {
-    Timber.d("recomposed")
-
     val savedSelectedCountryState by targetActivity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
     )
@@ -337,14 +330,12 @@ fun AuthHomeScreen(
         }
     }
 
-    fun hasUserLoggedIn() = authHomeUIState.userSignedIn
-
     when {
         targetActivity.authViewModel.connectionExceptionMessage.isNotEmpty() -> {
             Text(text = targetActivity.authViewModel.connectionExceptionMessage)
         }
 
-        hasUserLoggedIn() -> {
+        authHomeUIState.userSignedIn -> {
             Column {
                 val user = Firebase.auth.currentUser
                 Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
@@ -400,7 +391,6 @@ fun AuthHomeScreen(
                                 isSnackbarDisplayingWhileRequestingAuthCode = true
                             )
                         },
-                        dismissPreviousSnackbar = targetActivity.authViewModel::dismissSnackbar,
                         cancelPendingActiveListener = targetActivity.authViewModel::cancelPendingActiveListener,
                         onRetry = targetActivity.authViewModel::logUserOut,
                         snackbarHostState = scaffoldState.snackbarHostState
@@ -455,14 +445,12 @@ fun AuthHomeScreen(
     if (snackbarUIState.message.isNotEmpty()) {
         val kbController = LocalSoftwareKeyboardController.current
         kbController?.hide()
-        Timber.d("snackbarUIState.message: ${snackbarUIState.message}")
         LaunchedEffect(snackbarUIState.message) {
             scaffoldState.snackbarHostState.showSnackbar(
                 snackbarUIState.message, duration = snackbarUIState.duration
             )
         }
-    } else
-        Timber.d("snackbarUIState.message is empty")
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -479,7 +467,6 @@ fun LoginWithPhoneNumberScreen(
     handleLocationPermissionRequest: () -> Unit,
     snackbarIsDisplayingProvider: () -> Boolean,
     whenSnackbarIsDisplaying: () -> Unit,
-    dismissPreviousSnackbar: () -> Unit,
     cancelPendingActiveListener: () -> Unit,
     onRetry: () -> Unit,
     snackbarHostState: SnackbarHostState
@@ -634,14 +621,21 @@ fun LoginWithPhoneNumberScreen(
                 val snackbarWasBeingShown = snackbarIsDisplayingProvider()
                 if (snackbarWasBeingShown) {
                     LaunchedEffect(key1 = phoneNumber) {
-                        showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
+                        showNoticeAndRecommendation(
+                            snackbarHostState,
+                            whenSnackbarIsDisplaying,
+                            onRetry
+                        )
                     }
                 } else
                     LaunchedEffect(key1 = phoneNumber) {
                         delay(TIME_THRESHOLD_FOR_RESPONSE)
                         cancelPendingActiveListener()
-                        dismissPreviousSnackbar()
-                        showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
+                        showNoticeAndRecommendation(
+                            snackbarHostState,
+                            whenSnackbarIsDisplaying,
+                            onRetry
+                        )
                     }
 
                 Surface(
@@ -676,7 +670,7 @@ fun LoginWithPhoneNumberScreen(
                         }
                     }
 
-                    SubcomposeLayout() { constraints ->
+                    SubcomposeLayout { constraints ->
                         val placeables =
                             subcompose(0) { primaryComponent() }.map { it.measure(constraints) }
 
@@ -718,41 +712,15 @@ fun constraintsWithNewMaxWidth(constraints: Constraints, newMaxWith: Int): Const
         maxHeight = constraints.maxHeight
     )
 
-fun Modifier.layoutWithNewMaxWidth(newMaxWith: Int): Modifier = layout { measurable, constraints ->
-    val component = measurable.measure(
-        constraintsWithNewMaxWidth(constraints, newMaxWith)
-    )
-    layout(
-        component.width, component.height
-    ) { component.placeRelative(0, 0) }
-}
-
-/*
-@Composable
-fun PhoneNumberInputCombo(content: @Composable () -> Unit) {
-    SubcomposeLayout { constraints ->
-        var measurables = subcompose(1, content)
-        var placeable1 = measurables[0].measure(constraints)
-        val size = IntSize(placeable1.width, placeable1.height)
-
-        measurables =
-            subcompose(2, content) // subcomposing the same content requires another slotId
-
-        placeable1 = measurables[0].measure(
-            ConstraintsWithNewMaxWidth(constraints, (size.width * .4).toInt())
+fun Modifier.layoutWithNewMaxWidth(newMaxWith: Int): Modifier =
+    layout { measurable, constraints ->
+        val component = measurable.measure(
+            constraintsWithNewMaxWidth(constraints, newMaxWith)
         )
-
-        val placeable2 = measurables[1].measure(
-            ConstraintsWithNewMaxWidth(constraints, (size.width * .6).toInt())
-        )
-
-        layout(size.width, size.height) {
-            placeable1.placeRelative(0, 0)
-            placeable2.placeRelative(placeable1.width, 0)
-        }
+        layout(
+            component.width, component.height
+        ) { component.placeRelative(0, 0) }
     }
-}
-*/
 
 fun hasException(message: String?) = !message.isNullOrEmpty()
 
@@ -821,11 +789,19 @@ fun VerifyCodeScreen(
             val snackbarWasBeingShown = snackbarIsDisplayingProvider()
             if (snackbarWasBeingShown) {
                 LaunchedEffect(key1 = codeToVerify) {
-                    showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
+                    showNoticeAndRecommendation(
+                        snackbarHostState,
+                        whenSnackbarIsDisplaying,
+                        onRetry
+                    )
                 }
             } else LaunchedEffect(key1 = codeToVerify) {
                 delay(TIME_THRESHOLD_FOR_RESPONSE)
-                showNoticeAndRecommendation(snackbarHostState, whenSnackbarIsDisplaying, onRetry)
+                showNoticeAndRecommendation(
+                    snackbarHostState,
+                    whenSnackbarIsDisplaying,
+                    onRetry
+                )
             }
 
             Surface(
@@ -860,7 +836,7 @@ fun VerifyCodeScreen(
                     }
                 }
 
-                SubcomposeLayout() { constraints ->
+                SubcomposeLayout { constraints ->
                     val placeables =
                         subcompose(0) { primaryComponent() }.map { it.measure(constraints) }
 
@@ -893,7 +869,6 @@ fun LoginWithPasswordScreenPreview() {
             {},
             {},
             {},
-            {},
             SnackbarHostState(),
         )
     }
@@ -903,7 +878,7 @@ fun LoginWithPasswordScreenPreview() {
 @Composable
 fun VerifyCodeScreenPreview() {
     FirebaseAuthTheme {
-        VerifyCodeScreen({ "" }, {}, { "" }, { false },  SnackbarHostState(), { false }, {}, {})
+        VerifyCodeScreen({ "" }, {}, { "" }, { false }, SnackbarHostState(), { false }, {}, {})
     }
 }
 
