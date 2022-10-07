@@ -35,6 +35,7 @@ object Modules {
     fun providesAuthHomeUIState(): AuthUIState.AuthHomeUIState = AuthUIState.AuthHomeUIState(
         "", PhoneAuthProvider.ForceResendingToken.zza(),
         Firebase.auth.currentUser != null,
+        true,
     )
 
     @Singleton
@@ -42,7 +43,8 @@ object Modules {
     fun providesSnackbarUIState(): AuthUIState.SnackbarUIState =
         AuthUIState.SnackbarUIState(
             "",
-            SnackbarDuration.Long,
+            0.0,
+            SnackbarDuration.Short,
             isSnackbarDisplayingWhileRequestingAuthCode = false,
             false
         )

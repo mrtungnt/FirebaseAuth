@@ -18,11 +18,13 @@ data class AuthUIState @Inject constructor(
         var verificationId: String,
         var resendingToken: PhoneAuthProvider.ForceResendingToken,
         var userSignedIn: Boolean,
+        var shouldShowLandingScreen: Boolean,
     ) : Parcelable
 
     @Parcelize
     data class SnackbarUIState @Inject constructor(
         var message: String,
+        var messageId: Double,
         var duration: SnackbarDuration,
         var isSnackbarDisplayingWhileRequestingAuthCode: Boolean,
         var isSnackbarDisplayingWhileVerifyingAuthCode: Boolean,

@@ -12,8 +12,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkRequest
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
@@ -49,6 +47,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
+import com.example.firebaseauth.ui.LandingScreen
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
@@ -64,6 +63,7 @@ import timber.log.Timber
 @AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
     val authViewModel by viewModels<AuthViewModel>()
+
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -72,7 +72,7 @@ class AuthActivity : ComponentActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION, false
             ) -> {
                 // Precise location access granted.
-                Log.d("ACCESS_FINE_LOCATION", "Granted: as requested")
+                Timber.d("ACCESS_FINE_LOCATION granted as requested.")
                 whenLocationPermissionGranted()
             }
 
@@ -80,23 +80,23 @@ class AuthActivity : ComponentActivity() {
                 Manifest.permission.ACCESS_COARSE_LOCATION, false
             ) -> {
                 // Only approximate location access granted.
-                Log.d("ACCESS_COARSE_LOCATION", "Granted: as requested")
+                Timber.d("ACCESS_COARSE_LOCATION granted as requested.")
                 whenLocationPermissionGranted()
             }
 
             else -> {
                 // No location access granted.
-                Log.d("ACCESS_LOCATION", "Granted: NONE")
+                Timber.d("ACCESS_LOCATION not granted.")
             }
         }
     }
 
-    private val intentSenderForResult =
-        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
+    private val intentSenderForEnablingLocation =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult())
+        { activityResult ->
             if (activityResult.resultCode == RESULT_OK) {
-                Log.d("intentSenderForResult", "Location setting: On now")
                 whenLocationReady()
-            } else Log.d("ResolutionForResult", "resultCode: ${activityResult.resultCode}")
+            }
         }
 
     fun handleLocationPermissionRequest() {
@@ -106,7 +106,7 @@ class AuthActivity : ComponentActivity() {
         when {
             permissionCheck == PackageManager.PERMISSION_GRANTED -> {
                 Timber.d(
-                    "ACCESS_COARSE_LOCATION Granted: yes"
+                    "ACCESS_COARSE_LOCATION granted."
                 )
                 whenLocationPermissionGranted()
             }
@@ -114,11 +114,10 @@ class AuthActivity : ComponentActivity() {
             shouldShowRequestPermissionRationale(
                 this, Manifest.permission.ACCESS_COARSE_LOCATION
             ) -> {
-                Log.d(
-                    "ACCESS_COARSE_LOCATION", "ShouldShowRequestPermissionRationale: yes"
+                authViewModel.updateSnackbar(
+                    "Hãy cho phép dùng Định vị (Location) để sử dụng tính năng này.",
+                    duration = SnackbarDuration.Short
                 )
-
-                Toast.makeText(applicationContext, "ACCESS_COARSE_LOCATION needed", 1000)
             }
 
             else -> {
@@ -139,7 +138,7 @@ class AuthActivity : ComponentActivity() {
                     location.latitude, location.longitude, 1
                 )
             } catch (exc: java.lang.Exception) {
-                Log.e("Location", "${exc.message}")
+                Timber.e("${exc.message}")
                 emptyList()
             }
         }
@@ -182,28 +181,25 @@ class AuthActivity : ComponentActivity() {
             whenLocationReady()
         }
         taskLocationSettingsResponse.addOnFailureListener {
-            Log.e(
-                "LocationSettingsResponse", "value: $it"
-            )
             if (it is ResolvableApiException) {
                 // Location settings are not satisfied, but this can be fixed
                 // by showing the user a dialog.
                 try {
-                    // Show the dialog by calling startResolutionForResult(),
-                    // and check the result in onActivityResult().
+                    // Show the dialog by calling intentSenderForEnablingLocation.launch((),
+                    // and check the result in the callback of registerForActivityResult().
                     val status = it.status
                     if (status.hasResolution()) {
                         val pendingIntent: PendingIntent = status.resolution!!
 //                        Preconditions.checkNotNull(pendingIntent)
-                        intentSenderForResult.launch(
+                        intentSenderForEnablingLocation.launch(
                             IntentSenderRequest.Builder(pendingIntent.intentSender)/*.setFillInIntent(null)
                                 .setFlags(0, 0)*/.build()
                         )
                     }
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
-                    Log.e(
-                        "SendIntent", "msg: ${it.message}"
+                    Timber.e(
+                        "${it.message}"
                     )
                 }
             }
@@ -261,6 +257,7 @@ class AuthActivity : ComponentActivity() {
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setContent {
+
             if (isConnected) HomeContent()
             else NoConnectionDisplay()
         }
@@ -279,7 +276,6 @@ fun AuthActivity.HomeContent() {
             ) {
                 AuthHomeScreen(
                     scaffoldState,
-                    phoneAuth,
                     authViewModel.authStateFlow,
                     this,
                 )
@@ -297,7 +293,6 @@ fun NoConnectionDisplay() {
 @Composable
 fun AuthHomeScreen(
     scaffoldState: ScaffoldState,
-    phoneAuth: PhoneAuth,
     authUIStateFlow: StateFlow<AuthUIState>,
     targetActivity: AuthActivity,
 ) {
@@ -321,7 +316,7 @@ fun AuthHomeScreen(
         mutableStateOf(targetActivity.authViewModel.authState.authVerificationUIState)
     }
 
-    LaunchedEffect(key1 = Unit) {
+    LaunchedEffect(Unit) {
         authUIStateFlow.collect {
             authHomeUIState = it.authHomeUIState
             snackbarUIState = it.snackbarUIState
@@ -331,6 +326,10 @@ fun AuthHomeScreen(
     }
 
     when {
+        authHomeUIState.shouldShowLandingScreen -> LandingScreen(isDoneProvider = { targetActivity.authViewModel.countriesAndDialCodes.isNotEmpty() }) {
+            targetActivity.authViewModel.setShouldShowLandingScreen(false)
+        }
+
         targetActivity.authViewModel.connectionExceptionMessage.isNotEmpty() -> {
             Text(text = targetActivity.authViewModel.connectionExceptionMessage)
         }
@@ -343,10 +342,6 @@ fun AuthHomeScreen(
                     Text(text = "Sign out")
                 }
             }
-        }
-
-        targetActivity.authViewModel.countriesAndDialCodes.isEmpty() -> {
-            Text("Khởi tạo")
         }
 
         else -> {
@@ -372,11 +367,12 @@ fun AuthHomeScreen(
                             if (hasException(authRequestUIState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
                                 ""
                             )
-                            phoneNumber = it
+                            if (it.last().code != KEY_ENTER)
+                                phoneNumber = it
                         },
                         onDone = {
                             if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
-                            else phoneAuth.startPhoneNumberVerification(
+                            else targetActivity.phoneAuth.startPhoneNumberVerification(
                                 "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authHomeUIState.resendingToken
                             )
@@ -415,12 +411,12 @@ fun AuthHomeScreen(
                                     ""
                                 )
 
-                                if (it.last().code != 10) // Not key Enter
+                                if (it.last().code != KEY_ENTER) // Not key Enter
                                     codeToVerify = it
                             }
 
                             if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
-                                phoneAuth.onReceiveCodeToVerify(
+                                targetActivity.phoneAuth.onReceiveCodeToVerify(
                                     authHomeUIState.verificationId, codeToVerify
                                 )
                                 kbController?.hide()
@@ -445,13 +441,15 @@ fun AuthHomeScreen(
     if (snackbarUIState.message.isNotEmpty()) {
         val kbController = LocalSoftwareKeyboardController.current
         kbController?.hide()
-        LaunchedEffect(snackbarUIState.message) {
+        LaunchedEffect(snackbarUIState.messageId) {
             scaffoldState.snackbarHostState.showSnackbar(
                 snackbarUIState.message, duration = snackbarUIState.duration
             )
         }
     }
 }
+
+const val KEY_ENTER = 10
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -508,10 +506,10 @@ fun LoginWithPhoneNumberScreen(
                     modifier = Modifier.width(horizontalCenterColumnWidth)
                 ) {
                     /*Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    null,
-                    modifier = Modifier.padding(top = 50.dp)
-                )*/
+                        painter = painterResource(id = R.drawable.logo),
+                        null,
+                        modifier = Modifier.padding(top = 50.dp)
+                    )*/
 
                     ForkedExposedDropdownMenuBox(expanded = expanded,
                         onExpandedChange = { expanded = !expanded },
@@ -618,8 +616,8 @@ fun LoginWithPhoneNumberScreen(
             }
 
             if (requestInProgress) {
-                val snackbarWasBeingShown = snackbarIsDisplayingProvider()
-                if (snackbarWasBeingShown) {
+                val isSnackbarDisplaying = snackbarIsDisplayingProvider()
+                if (isSnackbarDisplaying) {
                     LaunchedEffect(key1 = phoneNumber) {
                         showNoticeAndRecommendation(
                             snackbarHostState,
@@ -741,6 +739,7 @@ fun VerifyCodeScreen(
     val codeToVerify = codeToVerifyProvider()
     val exceptionMessage = exceptionMessageProvider()
     val verificationInProgress = verificationInProgressProvider()
+
     Box {
         @Composable
         fun primaryComponent() {
@@ -786,8 +785,8 @@ fun VerifyCodeScreen(
         primaryComponent()
 
         if (verificationInProgress) {
-            val snackbarWasBeingShown = snackbarIsDisplayingProvider()
-            if (snackbarWasBeingShown) {
+            val isSnackbarDisplaying = snackbarIsDisplayingProvider()
+            if (isSnackbarDisplaying) {
                 LaunchedEffect(key1 = codeToVerify) {
                     showNoticeAndRecommendation(
                         snackbarHostState,

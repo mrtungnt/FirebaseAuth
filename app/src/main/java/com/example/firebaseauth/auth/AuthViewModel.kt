@@ -19,7 +19,6 @@ import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -151,6 +150,12 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun setShouldShowLandingScreen(decision: Boolean) {
+        val authHomeUIState =
+            authStateFlow.value.authHomeUIState.copy(shouldShowLandingScreen = decision)
+        savedState[stateKeyName] = authStateFlow.value.copy(authHomeUIState = authHomeUIState)
+    }
+
     fun dismissSnackbar() {
         snackbarHostState.currentSnackbarData?.dismiss()
     }
@@ -163,6 +168,7 @@ class AuthViewModel @Inject constructor(
     ) {
         val snackbarUIState = authStateFlow.value.snackbarUIState.copy(
             message = message,
+            messageId=Math.random(),
             duration = duration,
             isSnackbarDisplayingWhileRequestingAuthCode = isSnackbarDisplayingWhileRequestingAuthCode,
             isSnackbarDisplayingWhileVerifyingAuthCode = isSnackbarDisplayingWhileVerifyingAuthCode
