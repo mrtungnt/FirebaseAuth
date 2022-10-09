@@ -158,10 +158,9 @@ fun AuthHomeScreen(
                         requestInProgressProvider = { authRequestUIState.requestInProgress },
                         exceptionMessageProvider = { authRequestUIState.requestExceptionMessage },
                         handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest,
-                        cancelPendingActiveListener = targetActivity.authViewModel::cancelPendingActiveListener,
                         isRequestTimeoutProvider = { authRequestUIState.isRequestTimeout },
                         onRequestTimeout = targetActivity.authViewModel::onRequestTimeout,
-                        onRetry = targetActivity.authViewModel::logUserOut,
+                        onRetry = { targetActivity.authViewModel.cancelPendingActiveListener();targetActivity.authViewModel.logUserOut() },
                         snackbarHostState = scaffoldState.snackbarHostState
                     )
                 }
@@ -269,7 +268,6 @@ fun LoginWithPhoneNumberScreen(
     requestInProgressProvider: () -> Boolean,
     exceptionMessageProvider: () -> String,
     handleLocationPermissionRequest: () -> Unit,
-    cancelPendingActiveListener: () -> Unit,
     isRequestTimeoutProvider: () -> Boolean,
     onRequestTimeout: () -> Unit,
     onRetry: () -> Unit,
@@ -433,7 +431,6 @@ fun LoginWithPhoneNumberScreen(
                 } else
                     LaunchedEffect(key1 = phoneNumber) {
                         delay(TIME_THRESHOLD_FOR_RESPONSE)
-                        cancelPendingActiveListener()
                         onRequestTimeout()
                         showNoticeAndRecommendation(
                             snackbarHostState,
@@ -667,7 +664,6 @@ fun LoginWithPasswordScreenPreview() {
             { false },
             { "" },
             {},
-            {  },
             { false },
             {},
             {},

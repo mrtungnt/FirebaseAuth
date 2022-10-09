@@ -199,9 +199,8 @@ class AuthViewModel @Inject constructor(
     var locationCancellationToken = locationCancellationTokenSource.token
     fun cancelPendingActiveListener() {
         Timber.d(
-            "locationTask",
-            "in cancelPendingActiveListener() -isSuccessful: ${locationTask?.isSuccessful ?: "null"} " +
-                    "-isComplete ${locationTask?.isComplete ?: "null"}"
+            "locationTask -isSuccessful: ${locationTask?.isSuccessful ?: "null"} " +
+                    "-isComplete: ${locationTask?.isComplete ?: "null"}"
         )
         if (locationTask?.isSuccessful == false) {
             if (!locationCancellationToken.isCancellationRequested) {
