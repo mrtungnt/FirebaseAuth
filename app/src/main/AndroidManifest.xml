@@ -17,7 +17,6 @@
         <activity
             android:name=".auth.AuthActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.FirebaseAuth">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

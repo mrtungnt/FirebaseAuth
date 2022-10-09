@@ -1,7 +1,6 @@
 package com.example.firebaseauth.di
 
 import android.content.Context
-import androidx.compose.material.SnackbarDuration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
@@ -40,21 +39,11 @@ object Modules {
 
     @Singleton
     @Provides
-    fun providesSnackbarUIState(): AuthUIState.SnackbarUIState =
-        AuthUIState.SnackbarUIState(
-            "",
-            0.0,
-            SnackbarDuration.Short,
-            isSnackbarDisplayingWhileRequestingAuthCode = false,
-            false
-        )
-
-    @Singleton
-    @Provides
     fun providesAuthRequestUIState(): AuthUIState.AuthRequestUIState =
         AuthUIState.AuthRequestUIState(
             "",
-            false,
+            requestInProgress = false,
+            false
         )
 
     @Singleton
@@ -63,6 +52,7 @@ object Modules {
         AuthUIState.AuthVerificationUIState(
             "",
             false,
+            isVerificationTimeout = false
         )
 
     @CountryNamesAndDialCodesDataStore

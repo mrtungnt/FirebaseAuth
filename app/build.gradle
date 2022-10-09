@@ -68,7 +68,7 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KaptGenerateStubs.class)
 
 dependencies {
     ext {
-        ktor_version = '2.1.1'
+        ktor_version = '2.1.2'
         room_version = "2.4.3"
     }
     implementation 'androidx.core:core-ktx:1.8.0'

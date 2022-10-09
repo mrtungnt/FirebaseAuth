@@ -15,8 +15,8 @@ import kotlin.system.measureTimeMillis
 
 @Composable
 fun LandingScreen(isDoneProvider: () -> Boolean, onDone: () -> Unit) {
-    val updateOnDone by rememberUpdatedState(newValue = onDone)
-    val isDone by rememberUpdatedState(newValue = isDoneProvider())
+    val updatedOnDone by rememberUpdatedState(newValue = onDone)
+    val updatedIsDone by rememberUpdatedState(newValue = isDoneProvider())
     var shouldShowBlankScreen by remember {
         mutableStateOf(true)
     }
@@ -31,12 +31,12 @@ fun LandingScreen(isDoneProvider: () -> Boolean, onDone: () -> Unit) {
             delay(100)
             shouldShowBlankScreen = false
             while (true) {
-                if (isDone) break
+                if (updatedIsDone) break
                 delay(1)
             }
         }
         if (t < 2000L) delay(2000L - t)
-        updateOnDone()
+        updatedOnDone()
     }
 }
 

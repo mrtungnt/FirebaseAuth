@@ -1,7 +1,6 @@
 package com.example.firebaseauth.auth
 
 import android.location.Location
-import android.util.Log
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.SnackbarHostState
 import androidx.compose.runtime.getValue
@@ -31,7 +30,12 @@ class AuthViewModel @Inject constructor(
     private val savedState: SavedStateHandle
 ) :
     ViewModel(), PhoneAuthNotification {
+    val snackbarHostState = SnackbarHostState()
+
+    var shouldOpenLocationRequestPermissionRationaleDialog by mutableStateOf(false)
+
     private val stateKeyName = "savedUIState"
+
     val authStateFlow = savedState.getStateFlow(stateKeyName, authState)
 
     private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode> by mutableStateOf(
@@ -55,12 +59,15 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    val snackbarHostState = SnackbarHostState()
-
     fun logUserOut() {
         Firebase.auth.signOut()
         val authState =
-            authState.copy(authHomeUIState = authState.authHomeUIState.copy(userSignedIn = Firebase.auth.currentUser != null))
+            authState.copy(
+                authHomeUIState = authState.authHomeUIState.copy(
+                    userSignedIn = Firebase.auth.currentUser != null, shouldShowLandingScreen =
+                    authStateFlow.value.authHomeUIState.shouldShowLandingScreen
+                )
+            )
         savedState[stateKeyName] = authState
     }
 
@@ -144,7 +151,7 @@ class AuthViewModel @Inject constructor(
             try {
                 saveSelectedCountry(_countriesAndDialCodes.first { it.name == countryName })
             } catch (exc: NoSuchElementException) {
-                Log.e("NoSuchElementException", "msg: ${exc.message}")
+                Timber.e("${exc.message}")
                 updateSnackbar("Không khớp được tên quốc gia")
             }
         }
@@ -160,20 +167,31 @@ class AuthViewModel @Inject constructor(
         snackbarHostState.currentSnackbarData?.dismiss()
     }
 
+    fun onRequestTimeout() {
+        val authRequestUIState =
+            authStateFlow.value.authRequestUIState.copy(isRequestTimeout = true)
+        savedState[stateKeyName] = authStateFlow.value.copy(authRequestUIState = authRequestUIState)
+    }
+
+    fun onVerificationTimeout() {
+        val authVerificationUIState =
+            authStateFlow.value.authVerificationUIState.copy(isVerificationTimeout = true)
+        savedState[stateKeyName] =
+            authStateFlow.value.copy(authVerificationUIState = authVerificationUIState)
+    }
+
     fun updateSnackbar(
-        message: String = "",
-        duration: SnackbarDuration = SnackbarDuration.Long,
-        isSnackbarDisplayingWhileRequestingAuthCode: Boolean = false,
-        isSnackbarDisplayingWhileVerifyingAuthCode: Boolean = false,
+        message: String,
+        duration: SnackbarDuration = SnackbarDuration.Short,
     ) {
-        val snackbarUIState = authStateFlow.value.snackbarUIState.copy(
-            message = message,
-            messageId=Math.random(),
-            duration = duration,
-            isSnackbarDisplayingWhileRequestingAuthCode = isSnackbarDisplayingWhileRequestingAuthCode,
-            isSnackbarDisplayingWhileVerifyingAuthCode = isSnackbarDisplayingWhileVerifyingAuthCode
-        )
-        savedState[stateKeyName] = authStateFlow.value.copy(snackbarUIState = snackbarUIState)
+        dismissSnackbar()
+        viewModelScope.launch {
+            snackbarHostState.showSnackbar(message, duration = duration)
+        }
+    }
+
+    fun openLocationRequestPermissionRationaleDialog() {
+        shouldOpenLocationRequestPermissionRationaleDialog = true
     }
 
     var locationTask: Task<Location>? = null
