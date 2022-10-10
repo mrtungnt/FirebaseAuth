@@ -121,7 +121,7 @@ class AuthActivity : ComponentActivity() {
     private fun whenLocationReady() {
         authViewModel.updateSnackbar(
             "Đang xác định quốc gia từ vị trí. Trong một số điều kiện, có thể mất 30 giây.",
-            SnackbarDuration.Long
+            SnackbarDuration.Indefinite
         )
         authViewModel.locationTask = fusedLocationClient.getCurrentLocation(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY, authViewModel.locationCancellationToken

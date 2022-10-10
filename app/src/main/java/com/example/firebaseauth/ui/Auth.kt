@@ -77,20 +77,23 @@ fun AuthHomeScreen(
     authUIStateFlow: StateFlow<AuthUIState>,
     targetActivity: AuthActivity,
 ) {
-    val savedSelectedCountryState by targetActivity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
+    val vm by targetActivity::authViewModel
+    val phoneAuth by targetActivity::phoneAuth
+
+    val savedSelectedCountryState by vm.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
     )
 
     var authHomeUIState by remember {
-        mutableStateOf(targetActivity.authViewModel.authState.authHomeUIState)
+        mutableStateOf(vm.authState.authHomeUIState)
     }
 
     var authRequestUIState by remember {
-        mutableStateOf(targetActivity.authViewModel.authState.authRequestUIState)
+        mutableStateOf(vm.authState.authRequestUIState)
     }
 
     var authVerificationUIState by remember {
-        mutableStateOf(targetActivity.authViewModel.authState.authVerificationUIState)
+        mutableStateOf(vm.authState.authVerificationUIState)
     }
 
     LaunchedEffect(Unit) {
@@ -102,19 +105,19 @@ fun AuthHomeScreen(
     }
 
     when {
-        authHomeUIState.shouldShowLandingScreen -> LandingScreen(isDoneProvider = { targetActivity.authViewModel.countriesAndDialCodes.isNotEmpty() }) {
-            targetActivity.authViewModel.setShouldShowLandingScreen(false)
+        authHomeUIState.shouldShowLandingScreen -> LandingScreen(isDoneProvider = { vm.countriesAndDialCodes.isNotEmpty() }) {
+            vm.setShouldShowLandingScreen(false)
         }
 
-        targetActivity.authViewModel.connectionExceptionMessage.isNotEmpty() -> {
-            Text(text = targetActivity.authViewModel.connectionExceptionMessage)
+        vm.connectionExceptionMessage.isNotEmpty() -> {
+            Text(text = vm.connectionExceptionMessage)
         }
 
         authHomeUIState.userSignedIn -> {
             Column {
                 val user = Firebase.auth.currentUser
                 Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
-                Button(onClick = targetActivity.authViewModel::logUserOut) {
+                Button(onClick = vm::logUserOut) {
                     Text(text = "Sign out")
                 }
             }
@@ -130,17 +133,17 @@ fun AuthHomeScreen(
                     }
 
                     LoginWithPhoneNumberScreen(
-                        countryNamesAndDialCodes = targetActivity.authViewModel.countriesAndDialCodes,
+                        countryNamesAndDialCodes = vm.countriesAndDialCodes,
                         selectedCountryProvider = { savedSelectedCountryState },
                         onSelectedCountryChange = {
-                            targetActivity.authViewModel.saveSelectedCountry(it)
-                            if (hasException(authRequestUIState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
+                            vm.saveSelectedCountry(it)
+                            if (hasException(authRequestUIState.requestExceptionMessage)) vm.onRequestException(
                                 ""
                             )
                         },
                         phoneNumberProvider = { phoneNumber },
                         onPhoneNumberChange = {
-                            if (hasException(authRequestUIState.requestExceptionMessage)) targetActivity.authViewModel.onRequestException(
+                            if (hasException(authRequestUIState.requestExceptionMessage)) vm.onRequestException(
                                 ""
                             )
                             phoneNumber = if (it.isNotEmpty() && it.last().code != KEY_ENTER)
@@ -148,8 +151,8 @@ fun AuthHomeScreen(
                             else it
                         },
                         onDone = {
-                            if (savedSelectedCountryState.container.dialCode.isEmpty()) targetActivity.authViewModel.onEmptyDialCode()
-                            else targetActivity.phoneAuth.startPhoneNumberVerification(
+                            if (savedSelectedCountryState.container.dialCode.isEmpty()) vm.onEmptyDialCode()
+                            else phoneAuth.startPhoneNumberVerification(
                                 "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authHomeUIState.resendingToken
                             )
@@ -159,8 +162,8 @@ fun AuthHomeScreen(
                         exceptionMessageProvider = { authRequestUIState.requestExceptionMessage },
                         handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest,
                         isRequestTimeoutProvider = { authRequestUIState.isRequestTimeout },
-                        onRequestTimeout = targetActivity.authViewModel::onRequestTimeout,
-                        onRetry = { targetActivity.authViewModel.cancelPendingActiveListener();targetActivity.authViewModel.logUserOut() },
+                        onRequestTimeout = vm::onRequestTimeout,
+                        onRetry = { vm.cancelPendingActiveListener();vm.logUserOut() },
                         snackbarHostState = scaffoldState.snackbarHostState
                     )
                 }
@@ -171,16 +174,15 @@ fun AuthHomeScreen(
                     }
 
                     remember {
-                        Timber.d("in remember.")
-                        targetActivity.authViewModel.dismissSnackbar()
-                        targetActivity.authViewModel.cancelPendingActiveListener()
+                        vm.dismissSnackbar()
+                        vm.cancelPendingActiveListener()
                     }
 
                     VerifyCodeScreen(
                         codeToVerifyProvider = { codeToVerify },
                         onCodeChange = {
                             if (it.length <= VERIFICATION_CODE_LENGTH) {
-                                if (hasException(authVerificationUIState.verificationExceptionMessage)) targetActivity.authViewModel.onVerificationException(
+                                if (hasException(authVerificationUIState.verificationExceptionMessage)) vm.onVerificationException(
                                     ""
                                 )
 
@@ -189,7 +191,7 @@ fun AuthHomeScreen(
                             }
 
                             if (codeToVerify.length == VERIFICATION_CODE_LENGTH) {
-                                targetActivity.phoneAuth.onReceiveCodeToVerify(
+                                phoneAuth.onReceiveCodeToVerify(
                                     authHomeUIState.verificationId, codeToVerify
                                 )
                                 kbController?.hide()
@@ -199,15 +201,15 @@ fun AuthHomeScreen(
                         verificationInProgressProvider = { authVerificationUIState.verificationInProgress },
                         scaffoldState.snackbarHostState,
                         isVerificationTimeoutProvider = { authVerificationUIState.isVerificationTimeout },
-                        onVerificationTimeout = targetActivity.authViewModel::onVerificationTimeout,
-                        onRetry = { targetActivity.authViewModel.logUserOut() },
+                        onVerificationTimeout = vm::onVerificationTimeout,
+                        onRetry = { vm.logUserOut() },
                     )
                 }
             }
         }
     }
 
-    var shouldOpenLocationRequestPermissionRationaleDialog by targetActivity.authViewModel::shouldOpenLocationRequestPermissionRationaleDialog
+    var shouldOpenLocationRequestPermissionRationaleDialog by vm::shouldOpenLocationRequestPermissionRationaleDialog
     if (shouldOpenLocationRequestPermissionRationaleDialog) {
         AlertDialog(
             onDismissRequest = {
