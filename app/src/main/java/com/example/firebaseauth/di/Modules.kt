@@ -7,11 +7,16 @@ import androidx.datastore.dataStoreFile
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthUIState
+import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
+import com.example.firebaseauth.data.CountryNamesAndDialCodesRepositoryImpl
 import com.example.firebaseauth.data.CountryNamesAndDialCodesSerializer
 import com.example.firebaseauth.data.SelectedCountrySerializer
+import com.example.firebaseauth.data.local.CountryNamesAndDialCodesLocalSource
+import com.example.firebaseauth.data.network.CountriesAndDialCodesRemoteSource
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,6 +30,14 @@ annotation class CountryNamesAndDialCodesDataStore
 
 @Qualifier
 annotation class SelectedCountryDataStore
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class CountryNamesAndDialCodesModules{
+    @Singleton
+    @Binds
+    abstract fun bindsCountryNamesAndDialCodesRepository(implementation: CountryNamesAndDialCodesRepositoryImpl): CountryNamesAndDialCodesRepository
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -54,6 +67,8 @@ object Modules {
             false,
             isVerificationTimeout = false
         )
+
+
 
     @CountryNamesAndDialCodesDataStore
     @Singleton

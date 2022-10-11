@@ -6,11 +6,15 @@ import com.example.firebaseauth.data.network.CountriesAndDialCodesRemoteSource
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
-class CountryNamesAndDialCodesRepository @Inject constructor(
+interface CountryNamesAndDialCodesRepository {
+    suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes>
+}
+
+class CountryNamesAndDialCodesRepositoryImpl @Inject constructor(
     private val remoteSource: CountriesAndDialCodesRemoteSource,
     private val localSource: CountryNamesAndDialCodesLocalSource
-) {
-    suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes> {
+):CountryNamesAndDialCodesRepository {
+    override suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes> {
         return when {
             localSource.getData().first().entriesCount > 0 -> Result.success(
                 localSource.getData().first()

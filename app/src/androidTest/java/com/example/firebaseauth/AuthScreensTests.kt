@@ -1,20 +1,10 @@
 package com.example.firebaseauth
 
 import androidx.compose.material.SnackbarHostState
-import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.datastore.core.DataStore
-import androidx.datastore.core.DataStoreFactory
 import com.example.firebaseauth.auth.AuthActivity
-import com.example.firebaseauth.auth.AuthViewModel
-import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
-import com.example.firebaseauth.data.local.CountryNamesAndDialCodesLocalSource
-import com.example.firebaseauth.data.network.CountriesAndDialCodesRemoteSource
-import com.example.firebaseauth.ui.AuthHomeScreen
 import com.example.firebaseauth.ui.LoginWithPhoneNumberScreen
-import com.example.firebaseauth.ui.VerifyCodeScreen
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -60,7 +50,7 @@ class AuthScreensTests {
         }
     }
 
-    @Test
+    /*@Test
     fun dismissSnack(){
         val snackbarHostState = SnackbarHostState()
 val authViewModel = AuthViewModel(countryNamesAndDialCodesRepository = CountryNamesAndDialCodesRepository(remoteSource = CountriesAndDialCodesRemoteSource(), localSource = CountryNamesAndDialCodesLocalSource(dataStore = DataStoreFactory.)), )
@@ -69,5 +59,5 @@ val authViewModel = AuthViewModel(countryNamesAndDialCodesRepository = CountryNa
             rememberScaffoldState(snackbarHostState = authViewModel.snackbarHostState)
             AuthHomeScreen(scaffoldState = rememberScaffoldState(), authUIStateFlow = , targetActivity = )
         }
-    }
+    }*/
 }
