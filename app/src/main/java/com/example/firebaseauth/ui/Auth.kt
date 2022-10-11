@@ -77,8 +77,12 @@ fun AuthHomeScreen(
     authUIStateFlow: StateFlow<AuthUIState>,
     targetActivity: AuthActivity,
 ) {
-    val vm by targetActivity::authViewModel
-    val phoneAuth by targetActivity::phoneAuth
+    val vm = remember {
+        targetActivity.authViewModel
+    }
+    val phoneAuth = remember {
+        targetActivity.phoneAuth
+    }
 
     val savedSelectedCountryState by vm.flowOfSavedSelectedCountry.collectAsState(
         initial = SelectedCountry.getDefaultInstance()
@@ -163,7 +167,7 @@ fun AuthHomeScreen(
                         handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest,
                         isRequestTimeoutProvider = { authRequestUIState.isRequestTimeout },
                         onRequestTimeout = vm::onRequestTimeout,
-                        onRetry = { vm.cancelPendingActiveListener();vm.logUserOut() },
+                        onRetry = { vm.dismissSnackbar(); vm.cancelPendingActiveListener();vm.logUserOut() },
                         snackbarHostState = scaffoldState.snackbarHostState
                     )
                 }
