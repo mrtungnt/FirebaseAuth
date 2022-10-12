@@ -19,15 +19,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-class FakeCountryNamesAndDialCodesRepositoryImpl @Inject constructor() :
+/*class FakeCountryNamesAndDialCodesRepositoryImpl @Inject constructor() :
     CountryNamesAndDialCodesRepository {
     override suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes> =
         coroutineScope {
             Result.success(CountryNamesAndDialCodes.getDefaultInstance())
         }
-}
+}*/
 
-class FakeSavedSelectedCountryRepositoryImpl @Inject constructor() :
+/*class FakeSavedSelectedCountryRepositoryImpl @Inject constructor() :
     SavedSelectedCountryRepository {
     override suspend fun saveSelectedCountry(selectedCountry: CountryNamesAndDialCodes.NameAndDialCode) {
         TODO("Not yet implemented")
@@ -36,26 +36,36 @@ class FakeSavedSelectedCountryRepositoryImpl @Inject constructor() :
     override fun getFlowOfSelectedCountry(): Flow<SelectedCountry> {
         return flowOf(SelectedCountry.getDefaultInstance())
     }
-}
+}*/
 
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
     replaces = [ServiceBindersModule::class]
 )
-abstract class FakeServiceBindersModule {
+class FakeServiceProvidersModule {
     @Singleton
-    @Binds
-    abstract fun bindsCountryNamesAndDialCodesRepository(impl: FakeCountryNamesAndDialCodesRepositoryImpl): CountryNamesAndDialCodesRepository
-
-    @Singleton
-    @Binds
-    abstract fun bindsSavedSelectedCountryRepository(impl: FakeSavedSelectedCountryRepositoryImpl): SavedSelectedCountryRepository
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-class ClassProviderModule {
     @Provides
-    fun provides(): SavedStateHandle = SavedStateHandle()
+    fun providesCountryNamesAndDialCodesRepository(): CountryNamesAndDialCodesRepository {
+        return object : CountryNamesAndDialCodesRepository {
+            override suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes> =
+                coroutineScope {
+                    Result.success(CountryNamesAndDialCodes.getDefaultInstance())
+                }
+        }
+    }
+
+    @Singleton
+    @Provides
+    fun providesSavedSelectedCountryRepository(): SavedSelectedCountryRepository {
+        return object : SavedSelectedCountryRepository {
+            override suspend fun saveSelectedCountry(selectedCountry: CountryNamesAndDialCodes.NameAndDialCode) {
+                TODO("Not yet implemented")
+            }
+
+            override fun getFlowOfSelectedCountry(): Flow<SelectedCountry> {
+                return flowOf(SelectedCountry.getDefaultInstance())
+            }
+        }
+    }
 }

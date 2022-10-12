@@ -31,15 +31,12 @@ import androidx.compose.ui.unit.dp
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthActivity
-import com.example.firebaseauth.auth.AuthUIState
 import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.StateFlow
-import timber.log.Timber
 
 @RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -55,7 +52,6 @@ fun AuthActivity.HomeContent() {
             ) {
                 AuthHomeScreen(
                     scaffoldState,
-                    authViewModel.authStateFlow,
                     this,
                 )
             }
@@ -74,7 +70,6 @@ fun NoConnectionDisplay() {
 @Composable
 fun AuthHomeScreen(
     scaffoldState: ScaffoldState,
-    authUIStateFlow: StateFlow<AuthUIState>,
     targetActivity: AuthActivity,
 ) {
     val vm = remember {
@@ -89,19 +84,19 @@ fun AuthHomeScreen(
     )
 
     var authHomeUIState by remember {
-        mutableStateOf(vm.authState.authHomeUIState)
+        mutableStateOf(vm.authUIState.authHomeUIState)
     }
 
     var authRequestUIState by remember {
-        mutableStateOf(vm.authState.authRequestUIState)
+        mutableStateOf(vm.authUIState.authRequestUIState)
     }
 
     var authVerificationUIState by remember {
-        mutableStateOf(vm.authState.authVerificationUIState)
+        mutableStateOf(vm.authUIState.authVerificationUIState)
     }
 
     LaunchedEffect(Unit) {
-        authUIStateFlow.collect {
+        vm.authUIStateFlow.collect {
             authHomeUIState = it.authHomeUIState
             authRequestUIState = it.authRequestUIState
             authVerificationUIState = it.authVerificationUIState
