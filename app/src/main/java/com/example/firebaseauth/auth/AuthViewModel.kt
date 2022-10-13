@@ -11,7 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
-import com.example.firebaseauth.data.SavedSelectedCountryRepositoryImpl
+import com.example.firebaseauth.data.SavedSelectedCountryRepository
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
@@ -25,7 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val countryNamesAndDialCodesRepository: CountryNamesAndDialCodesRepository,
-    private val savedSelectedCountryRepository: SavedSelectedCountryRepositoryImpl,
+    private val savedSelectedCountryRepository: SavedSelectedCountryRepository,
     val authUIState: AuthUIState,
     private val savedState: SavedStateHandle
 ) :

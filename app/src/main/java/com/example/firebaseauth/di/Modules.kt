@@ -40,7 +40,7 @@ abstract class ServiceBindersModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-object ClassProvidersModule {
+object AuthHomeUIStateModule{
     @Singleton
     @Provides
     fun providesAuthHomeUIState(): AuthUIState.AuthHomeUIState = AuthUIState.AuthHomeUIState(
@@ -48,7 +48,11 @@ object ClassProvidersModule {
         Firebase.auth.currentUser != null,
         true,
     )
+}
 
+@Module
+@InstallIn(SingletonComponent::class)
+object ClassProvidersModule {
     @Singleton
     @Provides
     fun providesAuthRequestUIState(): AuthUIState.AuthRequestUIState =

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -22,7 +23,7 @@ fun LandingScreen(isDoneProvider: () -> Boolean, onDone: () -> Unit) {
     }
 
     if (shouldShowBlankScreen)
-        Box(Modifier)
+        Box(Modifier.testTag("BlankScreen"))
     else
         LogoAndSlogan()
 
@@ -31,7 +32,8 @@ fun LandingScreen(isDoneProvider: () -> Boolean, onDone: () -> Unit) {
             delay(100)
             shouldShowBlankScreen = false
             while (true) {
-                if (updatedIsDone) break
+                if (updatedIsDone)
+                    break
                 delay(1)
             }
         }
@@ -41,9 +43,9 @@ fun LandingScreen(isDoneProvider: () -> Boolean, onDone: () -> Unit) {
 }
 
 @Composable
-fun LogoAndSlogan(){
+fun LogoAndSlogan() {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testTag("LogoAndSlogan"),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -61,7 +63,7 @@ fun LogoAndSlogan(){
 
 @Preview(showBackground = true)
 @Composable
-fun LogoAndSloganPreview(){
+fun LogoAndSloganPreview() {
     FirebaseAuthTheme {
         LogoAndSlogan()
     }
