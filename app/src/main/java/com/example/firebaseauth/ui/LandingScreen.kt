@@ -45,7 +45,9 @@ fun LandingScreen(isDoneProvider: () -> Boolean, onDone: () -> Unit) {
 @Composable
 fun LogoAndSlogan() {
     Column(
-        modifier = Modifier.fillMaxSize().testTag("LogoAndSlogan"),
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("LogoAndSlogan"),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

@@ -4,10 +4,12 @@ import android.app.Application
 import android.content.Context
 import androidx.activity.compose.setContent
 import androidx.compose.material.SnackbarHostState
+import androidx.compose.material.Text
 import androidx.compose.material.rememberScaffoldState
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.runner.AndroidJUnitRunner
@@ -15,6 +17,7 @@ import com.example.firebaseauth.auth.AuthActivity
 import com.example.firebaseauth.auth.AuthUIState
 import com.example.firebaseauth.di.AuthHomeUIStateModule
 import com.example.firebaseauth.ui.AuthHomeScreen
+import com.example.firebaseauth.ui.LandingScreen
 import com.example.firebaseauth.ui.LoginWithPhoneNumberScreen
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
@@ -77,31 +80,12 @@ class WithActivityTests {
                 scaffoldState = scaffoldState,
                 targetActivity = androidComposedRule.activity
             )
-
-            /*val savedCountry by
-            androidComposedRule.activity.authViewModel.flowOfSavedSelectedCountry.collectAsState(
-                initial = SelectedCountry.getDefaultInstance()
-            )
-            Text(
-                text = "savedCountry: ${savedCountry.container.name}",
-                modifier = Modifier.testTag("savedCountry")
-            )*/
         }
     }
 
     @Test
     fun test() {
-        /* Assert.assertEquals(
-             androidComposedRule.activity.authViewModel.authUIState.authRequestUIState.requestExceptionMessage,
-             ""
-         )*/
-
-//        androidComposedRule.onNodeWithTag("savedCountry").assertIsDisplayed
-
-//        androidComposedRule.onNodeWithTag("BlankScreen").assertExists()
-
         androidComposedRule.onNodeWithText("Xong").performClick()
-
         runBlocking { delay(6000) }
     }
 
@@ -144,8 +128,61 @@ class WithoutActivityTests {
         runBlocking {
             val actualSnackbarText =
                 snapshotFlow { snackbarHostState.currentSnackbarData }.filterNotNull()
-                    .first()?.message
+                    .first().message
             Assert.assertEquals(expectedSnackbarText, actualSnackbarText)
         }
+    }
+
+    @Test
+    fun landingScreenTest() {
+        composeRule.setContent()
+        {
+            var isLandingScreenDone by remember {
+                mutableStateOf(false)
+            }
+
+            var shouldShowLandingScreen by remember {
+                mutableStateOf(true)
+            }
+            if (shouldShowLandingScreen) {
+                LandingScreen(isDoneProvider = { isLandingScreenDone }) {
+                    shouldShowLandingScreen = false
+                }
+            } else
+                Text(text = "Landing screen is done.")
+        }
+
+//        composeRule.mainClock.autoAdvance = false
+        composeRule.mainClock.advanceTimeBy(120)
+        composeRule.onNodeWithTag("LogoAndSlogan").assertExists()
+    }
+
+    @Test
+    fun landingScreenDoneTest() {
+        composeRule.setContent()
+        {
+            var isLandingScreenDone by remember {
+                mutableStateOf(false)
+            }
+
+            var shouldShowLandingScreen by remember {
+                mutableStateOf(true)
+            }
+            if (shouldShowLandingScreen) {
+                LandingScreen(isDoneProvider = { isLandingScreenDone }) {
+                    shouldShowLandingScreen = false
+                }
+
+                LaunchedEffect(key1 = Unit) {
+                    delay(1000)
+                    isLandingScreenDone = true
+                }
+            } else
+                Text(text = "Landing screen is done.")
+        }
+
+//        composeRule.mainClock.autoAdvance = false
+        composeRule.mainClock.advanceTimeBy(1500)
+        composeRule.onNodeWithTag("LogoAndSlogan").assertDoesNotExist()
     }
 }
