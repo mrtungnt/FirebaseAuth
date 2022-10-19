@@ -6,8 +6,10 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -390,37 +393,62 @@ fun LoginWithPhoneNumberScreen(
                             )
                         },
                         leadingIcon = {
-                            Row(modifier = Modifier.pointerInput(Unit) {
-                                detectTapGestures(onPress = { Timber.d("Clicked") })
-                            }
-                            ) {
-                                Text(
-                                    text = "VN", modifier = Modifier
-                                        .padding(start = 10.dp)
-                                        .align(
-                                            Alignment.CenterVertically
-                                        ), color = MaterialTheme.colors.secondaryVariant
-                                )
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
-                                    contentDescription = null,
+                            Row {
+                                Box(
                                     modifier = Modifier
-                                        .size(32.dp, 32.dp)
-                                        .align(
-                                            Alignment.CenterVertically
+                                        .height(56.dp)
+                                        .width(58.dp), contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clickable { },
+//                                            .background(Color.Magenta),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "VN",
+                                            modifier = Modifier
+                                                .padding(start = 10.dp),
+                                            color = MaterialTheme.colors.secondaryVariant
                                         )
-                                )
+                                        Image(
+                                            painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
+                                            contentDescription = null,
+                                            /*modifier = Modifier
+                                                .size(28.dp, 28.dp)*/
+                                        )
+                                        Spacer(modifier = Modifier.width(1.dp))
+                                        Spacer(
+                                            modifier = Modifier
+                                                .height(48.dp)
+                                                .width(1.dp)
+//                                                .padding(start = 1.dp, top = 4.dp, bottom = 4.dp)
+                                                .background(
+                                                    color = MaterialTheme.colors.primaryVariant.copy(
+                                                        alpha = .3f
+                                                    )
+                                                )
+                                        )
+                                    }
+                                }
+
                                 Spacer(
                                     modifier = Modifier
-                                        .size(1.dp, 48.dp)
+                                        .width(5.dp)
                                         .background(
-                                            color = MaterialTheme.colors.primaryVariant.copy(alpha = .3f)
+                                            color = MaterialTheme.colors.primaryVariant.copy(
+                                                alpha = 0f
+                                            )
                                         )
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
                             }
                         },
                         singleLine = true,
+                        keyboardActions = KeyboardActions(onDone = { onDone() }),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
+                        ),
                     )
 
                     Button(
