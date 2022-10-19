@@ -4,10 +4,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -15,12 +15,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,14 +29,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.example.firebaseauth.CountryNamesAndDialCodes
+import com.example.firebaseauth.R
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthActivity
-import com.example.firebaseauth.forked.ForkedExposedDropdownMenuBox
+import com.example.firebaseauth.data.CountryModel
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 @RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -302,13 +307,24 @@ fun LoginWithPhoneNumberScreen(
         }
 
         val horizontalCenterColumnWidth = 280.dp
-
+        var yOfProgressionSurface = 0
         Box {
-            @Composable
-            fun primaryComponent() {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(horizontalCenterColumnWidth)
+                    modifier = Modifier
+                        .width(horizontalCenterColumnWidth)
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            yOfProgressionSurface = placeable.height
+                            layout(placeable.width, placeable.height) {
+                                placeable.placeRelative(0, 0)
+                            }
+                        }
+                        .padding(top = 30.dp)
                 ) {
                     /*Image(
                         painter = painterResource(id = R.drawable.logo),
@@ -316,7 +332,7 @@ fun LoginWithPhoneNumberScreen(
                         modifier = Modifier.padding(top = 50.dp)
                     )*/
 
-                    ForkedExposedDropdownMenuBox(expanded = expanded,
+                    /*ForkedExposedDropdownMenuBox(expanded = expanded,
                         onExpandedChange = { expanded = !expanded },
                         modifier = Modifier
                             .onFocusChanged {
@@ -363,13 +379,56 @@ fun LoginWithPhoneNumberScreen(
                                 }
                             }
                         }
-                    }
+                    }*/
+
+                    OutlinedTextField(
+                        value = phoneNumber,
+                        onValueChange = onPhoneNumberChange,
+                        label = {
+                            Text(
+                                text = "Số điện thoại"
+                            )
+                        },
+                        leadingIcon = {
+                            Row(modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(onPress = { Timber.d("Clicked") })
+                            }
+                            ) {
+                                Text(
+                                    text = "VN", modifier = Modifier
+                                        .padding(start = 10.dp)
+                                        .align(
+                                            Alignment.CenterVertically
+                                        ), color = MaterialTheme.colors.secondaryVariant
+                                )
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(32.dp, 32.dp)
+                                        .align(
+                                            Alignment.CenterVertically
+                                        )
+                                )
+                                Spacer(
+                                    modifier = Modifier
+                                        .size(1.dp, 48.dp)
+                                        .background(
+                                            color = MaterialTheme.colors.primaryVariant.copy(alpha = .3f)
+                                        )
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                            }
+                        },
+                        singleLine = true,
+                    )
 
                     Button(
                         modifier = Modifier.padding(top = 18.dp),
                         onClick = handleLocationPermissionRequest
                     ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
 
+/*
                     Row(modifier = Modifier.padding(top = 10.dp)) {
                         OutlinedTextField(
                             modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
@@ -400,23 +459,47 @@ fun LoginWithPhoneNumberScreen(
                             ),
                         )
                     }
+*/
                 }
-            }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                primaryComponent()
                 if (hasException(exceptionMessage)) {
                     ExceptionShowBox(exceptionMessage = exceptionMessage)
                 } else if (!requestInProgress) {
-                    Button(
-                        onClick = onDone,
-                        modifier = Modifier
-                            .width(horizontalCenterColumnWidth)
-                            .padding(top = 24.dp)
-                    ) { Text(text = "Xong") }
+                    val countryJson = stringArrayResource(id = R.array.countries)
+                    Column() {
+                        Button(
+                            onClick = onDone,
+                            modifier = Modifier
+                                .width(horizontalCenterColumnWidth)
+                                .padding(top = 24.dp)
+                        ) { Text(text = "Xong") }
+                        val scope = rememberCoroutineScope()
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    try {
+                                        val json = Json { ignoreUnknownKeys = true }
+
+                                        val country = mutableListOf<List<CountryModel>>()
+                                        countryJson.forEach {
+                                            country.add(
+                                                json.decodeFromString<List<CountryModel>>(
+                                                    it
+                                                )
+                                            )
+                                        }
+                                        var count = 0
+                                        country.forEach { c -> c.forEach { count++; Timber.d("$count: ${it.name}") } }
+                                    } catch (exc: Exception) {
+                                        Timber.e(exc.message)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .width(horizontalCenterColumnWidth)
+                                .padding(top = 24.dp)
+                        ) { Text(text = "Do") }
+                    }
                 }
             }
 
@@ -443,48 +526,39 @@ fun LoginWithPhoneNumberScreen(
                     color = Color.Transparent.copy(0.37f),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    @Composable
-                    fun subComponent() {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
+                    Surface(
+                        modifier = Modifier
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                layout(constraints.maxWidth, constraints.maxHeight) {
+                                    placeable.placeRelative(0, yOfProgressionSurface)
+                                }
+                            }
+                            .fillMaxWidth()
+                            .padding(10.dp)
+                            .padding(top = 8.dp, bottom = 8.dp),
+                        elevation = 2.dp,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Column(
+                            Modifier
                                 .padding(10.dp)
-                                .padding(top = 8.dp, bottom = 8.dp),
-                            elevation = 2.dp,
-                            shape = MaterialTheme.shapes.small
+                                .width(IntrinsicSize.Max)
+                                .align(Alignment.Center)
                         ) {
-                            Column(
-                                Modifier
-                                    .padding(10.dp)
-                                    .width(IntrinsicSize.Max)
-                                    .align(Alignment.Center)
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
-                                Text(
-                                    text = "Chờ mã xác minh",
-                                    modifier = Modifier
-                                        .padding(top = 10.dp)
-                                        .align(Alignment.CenterHorizontally)
-                                )
-                            }
-                        }
-                    }
-
-                    SubcomposeLayout { constraints ->
-                        val placeables =
-                            subcompose(0) { primaryComponent() }.map { it.measure(constraints) }
-
-                        layout(constraints.maxWidth, constraints.maxHeight) {
-                            subcompose(1) { subComponent() }.forEach {
-                                it.measure(constraints).placeRelative(0, placeables[0].height)
-                            }
+                            Text(
+                                text = "Chờ mã xác minh",
+                                modifier = Modifier
+                                    .padding(top = 10.dp)
+                                    .align(Alignment.CenterHorizontally)
+                            )
                         }
                     }
                 }
             }
         }
-
     }
 }
 
@@ -541,51 +615,56 @@ fun VerifyCodeScreen(
     val codeToVerify = codeToVerifyProvider()
     val exceptionMessage = exceptionMessageProvider()
     val verificationInProgress = verificationInProgressProvider()
+    var yProgressionSurface = 0
 
     Box {
-        @Composable
-        fun primaryComponent() {
-            Column(
-                modifier = modifier
-                    .width(IntrinsicSize.Max)
-                    .align(Alignment.TopCenter),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Mã xác thực 6 số đã được gửi qua SMS.",
-                    modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
-                )
-                TextField(value = codeToVerify,
-                    onValueChange = onCodeChange,
-                    textStyle = TextStyle(textAlign = TextAlign.Center),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number, imeAction = ImeAction.None
-                    ),
-                    label = {
-                        Text(
-                            text = "Nhập mã xác thực",
-//                    style = TextStyle(textAlign = TextAlign.Center)
-                        )
-                    })
-                Spacer(modifier = Modifier.height(10.dp))
-                Divider(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                )
-//        Divider(Modifier.height(1.dp).background(Color.LightGray))
-                /*Spacer(
-                    modifier = Modifier.height(5.dp)
-                )*/
-
-                if (hasException(exceptionMessage)) {
-                    ExceptionShowBox(exceptionMessage = exceptionMessage)
+        Column(
+            modifier = modifier
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    yProgressionSurface = placeable.height
+                    layout(placeable.width, placeable.height) {
+                        placeable.placeRelative(0, 0)
+                    }
                 }
+                .width(IntrinsicSize.Max)
+                .align(Alignment.TopCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Mã xác thực 6 số đã được gửi qua SMS.",
+                modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
+            )
+
+            TextField(value = codeToVerify,
+                onValueChange = onCodeChange,
+                textStyle = TextStyle(textAlign = TextAlign.Center),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number, imeAction = ImeAction.None
+                ),
+                label = {
+                    Text(
+                        text = "Nhập mã xác thực",
+//                    style = TextStyle(textAlign = TextAlign.Center)
+                    )
+                })
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Divider(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+            )
+//        Divider(Modifier.height(1.dp).background(Color.LightGray))
+            /*Spacer(
+                modifier = Modifier.height(5.dp)
+            )*/
+
+            if (hasException(exceptionMessage)) {
+                ExceptionShowBox(exceptionMessage = exceptionMessage)
             }
         }
-        primaryComponent()
-
         if (verificationInProgress) {
             val isVerificationTimeout = isVerificationTimeoutProvider()
             if (isVerificationTimeout) {
@@ -608,42 +687,34 @@ fun VerifyCodeScreen(
                 color = Color.Transparent.copy(0.37f),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                @Composable
-                fun subComponent() {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
+                Surface(
+                    modifier = Modifier
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            layout(constraints.maxWidth, constraints.maxHeight) {
+                                placeable.placeRelative(0, yProgressionSurface)
+                            }
+                        }
+                        .fillMaxWidth()
+                        .padding(10.dp)
+                        .padding(top = 8.dp, bottom = 8.dp),
+                    elevation = 2.dp,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Column(
+                        Modifier
                             .padding(10.dp)
-                            .padding(top = 8.dp, bottom = 8.dp),
-                        elevation = 2.dp,
-                        shape = MaterialTheme.shapes.small
+                            .width(IntrinsicSize.Max)
+                            .align(Alignment.Center)
                     ) {
-                        Column(
-                            Modifier
-                                .padding(10.dp)
-                                .width(IntrinsicSize.Max)
-                                .align(Alignment.Center)
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
-                            Text(
-                                text = "Đang xác thực",
-                                modifier = Modifier
-                                    .padding(top = 10.dp)
-                                    .align(Alignment.CenterHorizontally)
-                            )
-                        }
-                    }
-                }
-
-                SubcomposeLayout { constraints ->
-                    val placeables =
-                        subcompose(0) { primaryComponent() }.map { it.measure(constraints) }
-
-                    layout(constraints.maxWidth, constraints.maxHeight) {
-                        subcompose(1) { subComponent() }.forEach {
-                            it.measure(constraints).placeRelative(0, placeables[0].height)
-                        }
+                        Text(
+                            text = "Đang xác thực",
+                            modifier = Modifier
+                                .padding(top = 10.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
                     }
                 }
             }

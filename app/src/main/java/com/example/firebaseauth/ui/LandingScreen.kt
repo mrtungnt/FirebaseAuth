@@ -34,7 +34,7 @@ fun LandingScreen(isDoneProvider: () -> Boolean, onDone: () -> Unit) {
             while (true) {
                 if (updatedIsDone)
                     break
-                delay(1)
+                delay(100)
             }
         }
         if (t < 2000L) delay(2000L - t)
