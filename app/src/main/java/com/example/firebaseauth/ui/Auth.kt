@@ -393,15 +393,15 @@ fun LoginWithPhoneNumberScreen(
                             )
                         },
                         leadingIcon = {
-                            Row {
                                 Box(
                                     modifier = Modifier
                                         .height(56.dp)
-                                        .width(58.dp), contentAlignment = Alignment.Center
+                                        .width(63.dp), contentAlignment = Alignment.Center
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxSize()
+                                            .padding(end = 5.dp)
                                             .clickable { },
 //                                            .background(Color.Magenta),
                                         verticalAlignment = Alignment.CenterVertically
@@ -430,18 +430,8 @@ fun LoginWithPhoneNumberScreen(
                                                     )
                                                 )
                                         )
-                                    }
                                 }
 
-                                Spacer(
-                                    modifier = Modifier
-                                        .width(5.dp)
-                                        .background(
-                                            color = MaterialTheme.colors.primaryVariant.copy(
-                                                alpha = 0f
-                                            )
-                                        )
-                                )
                             }
                         },
                         singleLine = true,
