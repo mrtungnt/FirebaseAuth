@@ -7,7 +7,6 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,9 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -31,6 +28,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.R
 import com.example.firebaseauth.SelectedCountry
@@ -53,15 +54,32 @@ fun AuthActivity.HomeContent() {
     FirebaseAuthTheme {
         val scaffoldState =
             rememberScaffoldState(snackbarHostState = authViewModel.snackbarHostState)
+
+        val navController = rememberNavController()
+
+        val activity = this
+
         Scaffold(scaffoldState = scaffoldState) {
             // A surface container using the 'background' color from the theme
             Surface(
                 modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
             ) {
-                AuthHomeScreen(
-                    scaffoldState,
-                    this,
-                )
+                NavHost(navController = navController, startDestination = "AuthHomeScreen") {
+                    composable(route = "AuthHomeScreen") {
+                        AuthHomeScreen(
+                            navController,
+                            scaffoldState,
+                            activity,
+                        )
+                    }
+                    composable(route = "CountriesScreen") {
+                        CountriesScreen {
+                            navController.navigate(
+                                "AuthHomeScreen"
+                            ) { popUpTo("AuthHomeScreen") { inclusive = true } }
+                        }
+                    }
+                }
             }
         }
     }
@@ -77,6 +95,7 @@ fun NoConnectionDisplay() {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AuthHomeScreen(
+    navController: NavController,
     scaffoldState: ScaffoldState,
     targetActivity: AuthActivity,
 ) {
@@ -148,6 +167,7 @@ fun AuthHomeScreen(
                                 ""
                             )
                         },
+                        onNavigateToCountriesScreen = { navController.navigate("CountriesScreen") },
                         phoneNumberProvider = { phoneNumber },
                         onPhoneNumberChange = {
                             if (hasException(authRequestUIState.requestExceptionMessage)) vm.onRequestException(
@@ -271,6 +291,7 @@ fun LoginWithPhoneNumberScreen(
     countryNamesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode>,
     selectedCountryProvider: () -> SelectedCountry,
     onSelectedCountryChange: (CountryNamesAndDialCodes.NameAndDialCode) -> Unit,
+    onNavigateToCountriesScreen: () -> Unit,
     phoneNumberProvider: () -> String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: () -> Unit,
@@ -335,103 +356,49 @@ fun LoginWithPhoneNumberScreen(
                         modifier = Modifier.padding(top = 50.dp)
                     )*/
 
-                    /*ForkedExposedDropdownMenuBox(expanded = expanded,
-                        onExpandedChange = { expanded = !expanded },
-                        modifier = Modifier
-                            .onFocusChanged {
-                                if (!it.isFocused) if (selectedCountryName != selectedCountry.container.name) selectedCountryName =
-                                    selectedCountry.container.name
-                            }
-                            .padding(top = 30.dp)
-
-                    ) {
-                        TextField(
-                            value = selectedCountryName,
-                            onValueChange = { selectedCountryName = it },
-                            label = { Text(text = "Quốc gia") },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(
-                                    expanded = expanded
-                                )
-                            },
-                            colors = ExposedDropdownMenuDefaults.textFieldColors(),
-                            singleLine = true,
-                        )
-
-                        val filter = countryNamesAndDialCodes.filter {
-                            it.name.contains(
-                                selectedCountryName, ignoreCase = true
-                            )
-                        }
-                        if (filter.isNotEmpty()) {
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false },
-                                modifier = Modifier
-                            ) {
-                                LazyColumn {
-                                    items(filter) {
-                                        DropdownMenuItem(onClick = {
-                                            selectedCountryName = it.name
-                                            onSelectedCountryChange(it)
-                                            expanded = false
-                                        }) {
-                                            Text(text = it.name)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }*/
-
                     OutlinedTextField(
                         value = phoneNumber,
                         onValueChange = onPhoneNumberChange,
-                        label = {
+                        placeholder = {
                             Text(
                                 text = "Số điện thoại"
                             )
                         },
                         leadingIcon = {
-                                Box(
+                            Box(
+                                modifier = Modifier
+                                    .height(56.dp)
+                                    .width(63.dp), contentAlignment = Alignment.Center
+                            ) {
+                                Row(
                                     modifier = Modifier
-                                        .height(56.dp)
-                                        .width(63.dp), contentAlignment = Alignment.Center
+                                        .fillMaxSize()
+                                        .padding(end = 5.dp)
+                                        .clickable(onClick = onNavigateToCountriesScreen),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
+                                    Text(
+                                        text = "VN",
                                         modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(end = 5.dp)
-                                            .clickable { },
-//                                            .background(Color.Magenta),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "VN",
-                                            modifier = Modifier
-                                                .padding(start = 10.dp),
-                                            color = MaterialTheme.colors.secondaryVariant
-                                        )
-                                        Image(
-                                            painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
-                                            contentDescription = null,
-                                            /*modifier = Modifier
-                                                .size(28.dp, 28.dp)*/
-                                        )
-                                        Spacer(modifier = Modifier.width(1.dp))
-                                        Spacer(
-                                            modifier = Modifier
-                                                .height(48.dp)
-                                                .width(1.dp)
-//                                                .padding(start = 1.dp, top = 4.dp, bottom = 4.dp)
-                                                .background(
-                                                    color = MaterialTheme.colors.primaryVariant.copy(
-                                                        alpha = .3f
-                                                    )
+                                            .padding(start = 10.dp),
+                                        color = MaterialTheme.colors.secondaryVariant
+                                    )
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
+                                        contentDescription = null,
+                                    )
+                                    Spacer(modifier = Modifier.width(1.dp))
+                                    Spacer(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .width(1.dp)
+                                            .background(
+                                                color = MaterialTheme.colors.primaryVariant.copy(
+                                                    alpha = .3f
                                                 )
-                                        )
+                                            )
+                                    )
                                 }
-
                             }
                         },
                         singleLine = true,
@@ -445,39 +412,6 @@ fun LoginWithPhoneNumberScreen(
                         modifier = Modifier.padding(top = 18.dp),
                         onClick = handleLocationPermissionRequest
                     ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
-
-/*
-                    Row(modifier = Modifier.padding(top = 10.dp)) {
-                        OutlinedTextField(
-                            modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
-                                (horizontalCenterColumnWidth.toPx() * .44).toInt()
-                            }),
-                            value = selectedCountry.container.dialCode,
-                            enabled = false,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text(text = "Mã đt QG (*)") },
-                        )
-
-                        OutlinedTextField(
-                            modifier = Modifier.layoutWithNewMaxWidth(with(LocalDensity.current) {
-                                (horizontalCenterColumnWidth.toPx() * .56).toInt()
-                            }),
-                            value = phoneNumber,
-                            onValueChange = onPhoneNumberChange,
-                            singleLine = true,
-                            label = {
-                                Text(
-                                    text = "Số điện thoại"
-                                )
-                            },
-                            keyboardActions = KeyboardActions(onDone = { onDone() }),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
-                            ),
-                        )
-                    }
-*/
                 }
 
                 if (hasException(exceptionMessage)) {
@@ -745,19 +679,20 @@ fun VerifyCodeScreen(
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme {
         LoginWithPhoneNumberScreen(
-            listOf(),
-            { SelectedCountry.getDefaultInstance() },
-            {},
-            { "" },
-            {},
-            {},
-            { false },
-            { "" },
-            {},
-            { false },
-            {},
-            {},
-            SnackbarHostState(),
+            countryNamesAndDialCodes = listOf(),
+            selectedCountryProvider = { SelectedCountry.getDefaultInstance() },
+            onSelectedCountryChange = {},
+            onNavigateToCountriesScreen = {},
+            phoneNumberProvider = { "" },
+            onPhoneNumberChange = {},
+            onDone = {},
+            requestInProgressProvider = { false },
+            exceptionMessageProvider = { "" },
+            handleLocationPermissionRequest = {},
+            isRequestTimeoutProvider = { false },
+            onRequestTimeout = {},
+            onRetry = {},
+            snackbarHostState = SnackbarHostState(),
         )
     }
 }
