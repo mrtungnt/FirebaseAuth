@@ -8,8 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
-fun CountriesScreen(onNavigateBack: () -> Unit) {
+fun CountryNamesAndCallingCodesScreen(onNavigateToAuthHomeScreen: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
-        Text(text = "Back", modifier = Modifier.clickable(onClick = onNavigateBack))
+        Text(
+            text = "Back",
+            modifier = Modifier.clickable(onClick = { onNavigateToAuthHomeScreen() })
+        )
     }
 }

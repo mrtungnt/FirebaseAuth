@@ -26,7 +26,7 @@ import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.firebaseauth.ui.HomeContent
-import com.example.firebaseauth.ui.NoConnectionDisplay
+import com.example.firebaseauth.ui.NoConnectionScreen
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
@@ -233,7 +233,7 @@ class AuthActivity : ComponentActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setContent {
             if (isConnected) HomeContent()
-            else NoConnectionDisplay()
+            else NoConnectionScreen()
         }
     }
 }

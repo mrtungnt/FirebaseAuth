@@ -1,3 +1,4 @@
+/*
 package com.example.firebaseauth
 
 import android.app.Application
@@ -113,14 +114,24 @@ class WithoutActivityTests {
                 },
                 onSelectedCountryChange = {},
                 phoneNumberProvider = { "" },
-                onPhoneNumberChange = { /*TODO*/ },
-                onDone = { /*TODO*/ },
+                onPhoneNumberChange = { */
+/*TODO*//*
+ },
+                onDone = { */
+/*TODO*//*
+ },
                 requestInProgressProvider = { true },
                 exceptionMessageProvider = { "" },
-                handleLocationPermissionRequest = { /*TODO*/ },
+                handleLocationPermissionRequest = { */
+/*TODO*//*
+ },
                 isRequestTimeoutProvider = { true },
-                onRequestTimeout = { /*TODO*/ },
-                onRetry = { /*TODO*/ },
+                onRequestTimeout = { */
+/*TODO*//*
+ },
+                onRetry = { */
+/*TODO*//*
+ },
                 snackbarHostState = snackbarHostState
             )
         }
@@ -230,3 +241,4 @@ class WithoutActivityTests {
         }
     }
 }
+*/

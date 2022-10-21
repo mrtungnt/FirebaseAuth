@@ -18,6 +18,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -28,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -36,7 +36,7 @@ import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.R
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthActivity
-import com.example.firebaseauth.data.CountryModel
+import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -67,13 +67,17 @@ fun AuthActivity.HomeContent() {
                 NavHost(navController = navController, startDestination = "AuthHomeScreen") {
                     composable(route = "AuthHomeScreen") {
                         AuthHomeScreen(
-                            navController,
-                            scaffoldState,
-                            activity,
+                            scaffoldState = scaffoldState,
+                            onNavigateToCountryNamesAndCallingCodesScreen = {
+                                navController.navigate(
+                                    "CountryNamesAndCallingCodesScreen"
+                                )
+                            },
+                            targetActivity = activity,
                         )
                     }
-                    composable(route = "CountriesScreen") {
-                        CountriesScreen {
+                    composable(route = "CountryNamesAndCallingCodesScreen") {
+                        CountryNamesAndCallingCodesScreen {
                             navController.navigate(
                                 "AuthHomeScreen"
                             ) { popUpTo("AuthHomeScreen") { inclusive = true } }
@@ -85,18 +89,13 @@ fun AuthActivity.HomeContent() {
     }
 }
 
-@Composable
-fun NoConnectionDisplay() {
-    Text(text = "No internet connection. Waiting for connection...")
-}
-
 @RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("RememberReturnType")
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AuthHomeScreen(
-    navController: NavController,
     scaffoldState: ScaffoldState,
+    onNavigateToCountryNamesAndCallingCodesScreen: () -> Unit,
     targetActivity: AuthActivity,
 ) {
     val vm = remember {
@@ -167,7 +166,7 @@ fun AuthHomeScreen(
                                 ""
                             )
                         },
-                        onNavigateToCountriesScreen = { navController.navigate("CountriesScreen") },
+                        onNavigateToCountryNamesAndCallingCodesScreen = onNavigateToCountryNamesAndCallingCodesScreen,
                         phoneNumberProvider = { phoneNumber },
                         onPhoneNumberChange = {
                             if (hasException(authRequestUIState.requestExceptionMessage)) vm.onRequestException(
@@ -291,7 +290,7 @@ fun LoginWithPhoneNumberScreen(
     countryNamesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode>,
     selectedCountryProvider: () -> SelectedCountry,
     onSelectedCountryChange: (CountryNamesAndDialCodes.NameAndDialCode) -> Unit,
-    onNavigateToCountriesScreen: () -> Unit,
+    onNavigateToCountryNamesAndCallingCodesScreen: () -> Unit,
     phoneNumberProvider: () -> String,
     onPhoneNumberChange: (String) -> Unit,
     onDone: () -> Unit,
@@ -355,62 +354,86 @@ fun LoginWithPhoneNumberScreen(
                         null,
                         modifier = Modifier.padding(top = 50.dp)
                     )*/
+                    Box {
+                        var textFieldHeight by remember {
+                            mutableStateOf(0)
+                        }
 
-                    OutlinedTextField(
-                        value = phoneNumber,
-                        onValueChange = onPhoneNumberChange,
-                        placeholder = {
-                            Text(
-                                text = "Số điện thoại"
-                            )
-                        },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .height(56.dp)
-                                    .width(63.dp), contentAlignment = Alignment.Center
-                            ) {
-                                Row(
+                        var getHeightDone by remember {
+                            mutableStateOf(false)
+                        }
+
+                        if (!getHeightDone) {
+                            OutlinedTextField(
+                                "",
+                                onValueChange = {},
+                                modifier = Modifier.layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    textFieldHeight = placeable.height
+                                    layout(placeable.width, placeable.height) {}
+                                })
+
+                            getHeightDone = true
+                        }
+
+                        OutlinedTextField(
+                            value = phoneNumber,
+                            onValueChange = onPhoneNumberChange,
+                            placeholder = {
+                                Text(
+                                    text = "Số điện thoại"
+                                )
+                            },
+                            leadingIcon = {
+                                Box(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(end = 5.dp)
-                                        .clickable(onClick = onNavigateToCountriesScreen),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .height(with(LocalDensity.current) { textFieldHeight.toDp() }),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = "VN",
-                                        modifier = Modifier
-                                            .padding(start = 10.dp),
-                                        color = MaterialTheme.colors.secondaryVariant
-                                    )
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
-                                        contentDescription = null,
-                                    )
-                                    Spacer(modifier = Modifier.width(1.dp))
-                                    Spacer(
+                                    Row(
                                         modifier = Modifier
                                             .fillMaxHeight()
-                                            .width(1.dp)
-                                            .background(
-                                                color = MaterialTheme.colors.primaryVariant.copy(
-                                                    alpha = .3f
+                                            .padding(end = 5.dp)
+                                            .clickable(onClick = { onNavigateToCountryNamesAndCallingCodesScreen() }),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "VN",
+                                            modifier = Modifier
+                                                .padding(start = 10.dp),
+                                            color = MaterialTheme.colors.secondaryVariant
+                                        )
+
+                                        Image(
+                                            painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
+                                            contentDescription = null,
+                                        )
+
+                                        Spacer(
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .width(3.dp)
+                                                .padding(start = 2.dp, top = 1.dp, bottom = 1.dp)
+                                                .background(
+                                                    color = MaterialTheme.colors.primaryVariant.copy(
+                                                        alpha = .3f
+                                                    )
                                                 )
-                                            )
-                                    )
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        singleLine = true,
-                        keyboardActions = KeyboardActions(onDone = { onDone() }),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
-                        ),
-                    )
+                            },
+                            singleLine = true,
+                            keyboardActions = KeyboardActions(onDone = { onDone() }),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
+                            ),
+                        )
+                    }
 
                     Button(
                         modifier = Modifier.padding(top = 18.dp),
-                        onClick = handleLocationPermissionRequest
+                        onClick = { handleLocationPermissionRequest() /* not using function reference for the sake of avoiding recomposition */ }
                     ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
                 }
 
@@ -420,22 +443,25 @@ fun LoginWithPhoneNumberScreen(
                     val countryJson = stringArrayResource(id = R.array.countries)
                     Column() {
                         Button(
-                            onClick = onDone,
+                            onClick = { onDone() /*indirect call to avoid recomposition*/ },
                             modifier = Modifier
                                 .width(horizontalCenterColumnWidth)
                                 .padding(top = 24.dp)
                         ) { Text(text = "Xong") }
+
                         val scope = rememberCoroutineScope()
                         Button(
                             onClick = {
+                                // using coroutines here causing recomposition.
                                 scope.launch {
                                     try {
                                         val json = Json { ignoreUnknownKeys = true }
 
-                                        val country = mutableListOf<List<CountryModel>>()
+                                        val country =
+                                            mutableListOf<List<CountryNamesAndCallingCodesModel>>()
                                         countryJson.forEach {
                                             country.add(
-                                                json.decodeFromString<List<CountryModel>>(
+                                                json.decodeFromString<List<CountryNamesAndCallingCodesModel>>(
                                                     it
                                                 )
                                             )
@@ -682,7 +708,7 @@ fun LoginWithPasswordScreenPreview() {
             countryNamesAndDialCodes = listOf(),
             selectedCountryProvider = { SelectedCountry.getDefaultInstance() },
             onSelectedCountryChange = {},
-            onNavigateToCountriesScreen = {},
+            onNavigateToCountryNamesAndCallingCodesScreen = {},
             phoneNumberProvider = { "" },
             onPhoneNumberChange = {},
             onDone = {},
