@@ -177,7 +177,11 @@ fun AuthHomeScreen(
                             else it
                         },
                         onDone = {
-                            if (savedSelectedCountryState.container.dialCode.isEmpty()) vm.onEmptyDialCode()
+                            if (savedSelectedCountryState.container.dialCode.isEmpty())
+                                vm.updateSnackbar(
+                                    "Chưa xác định được mã điện thoại quốc gia." +
+                                            "Hãy chọn quốc gia tương ứng với số điện thoại đăng ký cho ứng dụng."
+                                )
                             else phoneAuth.startPhoneNumberVerification(
                                 "${savedSelectedCountryState.container.dialCode}${phoneNumber.trimStart { it == '0' }}",
                                 authHomeUIState.resendingToken
@@ -359,11 +363,7 @@ fun LoginWithPhoneNumberScreen(
                             mutableStateOf(0)
                         }
 
-                        var getHeightDone by remember {
-                            mutableStateOf(false)
-                        }
-
-                        if (!getHeightDone) {
+                        if (textFieldHeight == 0) {
                             OutlinedTextField(
                                 "",
                                 onValueChange = {},
@@ -372,8 +372,6 @@ fun LoginWithPhoneNumberScreen(
                                     textFieldHeight = placeable.height
                                     layout(placeable.width, placeable.height) {}
                                 })
-
-                            getHeightDone = true
                         }
 
                         OutlinedTextField(
@@ -385,42 +383,36 @@ fun LoginWithPhoneNumberScreen(
                                 )
                             },
                             leadingIcon = {
-                                Box(
+                                Row(
                                     modifier = Modifier
-                                        .height(with(LocalDensity.current) { textFieldHeight.toDp() }),
-                                    contentAlignment = Alignment.Center
+                                        .height(with(LocalDensity.current) { textFieldHeight.toDp() })
+                                        .padding(end = 5.dp)
+                                        .clickable(onClick = { onNavigateToCountryNamesAndCallingCodesScreen() }),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
+                                    Text(
+                                        text = if (selectedCountry.container.name.isEmpty()) "Chọn quốc gia" else selectedCountry.container.name,
+                                        modifier = Modifier
+                                            .padding(start = 10.dp),
+                                        color = MaterialTheme.colors.secondaryVariant
+                                    )
+
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
+                                        contentDescription = null,
+                                    )
+
+                                    Spacer(
                                         modifier = Modifier
                                             .fillMaxHeight()
-                                            .padding(end = 5.dp)
-                                            .clickable(onClick = { onNavigateToCountryNamesAndCallingCodesScreen() }),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "VN",
-                                            modifier = Modifier
-                                                .padding(start = 10.dp),
-                                            color = MaterialTheme.colors.secondaryVariant
-                                        )
-
-                                        Image(
-                                            painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
-                                            contentDescription = null,
-                                        )
-
-                                        Spacer(
-                                            modifier = Modifier
-                                                .fillMaxHeight()
-                                                .width(3.dp)
-                                                .padding(start = 2.dp, top = 1.dp, bottom = 1.dp)
-                                                .background(
-                                                    color = MaterialTheme.colors.primaryVariant.copy(
-                                                        alpha = .3f
-                                                    )
+                                            .width(3.dp)
+                                            .padding(start = 2.dp, top = 1.dp, bottom = 1.dp)
+                                            .background(
+                                                color = MaterialTheme.colors.primaryVariant.copy(
+                                                    alpha = .3f
                                                 )
-                                        )
-                                    }
+                                            )
+                                    )
                                 }
                             },
                             singleLine = true,

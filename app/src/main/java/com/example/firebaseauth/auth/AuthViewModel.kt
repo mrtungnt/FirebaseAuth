@@ -71,15 +71,6 @@ class AuthViewModel @Inject constructor(
         savedState[stateKeyName] = authState
     }
 
-    fun onEmptyDialCode() {
-        val authRequestUIState = authUIStateFlow.value.authRequestUIState.copy(
-            requestExceptionMessage = "Chưa chọn quốc gia"
-        )
-        savedState[stateKeyName] = authUIStateFlow.value.copy(
-            authRequestUIState = authRequestUIState
-        )
-    }
-
     override fun onSuccessfulLogin() {
         val authHomeUIState = authUIStateFlow.value.authHomeUIState.copy(
             userSignedIn = Firebase.auth.currentUser != null

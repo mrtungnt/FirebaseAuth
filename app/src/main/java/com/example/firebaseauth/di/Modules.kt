@@ -76,21 +76,21 @@ object ClassProvidersModule {
     @Singleton
     @Provides
     fun providesCountryNamesAndDialCodesDataStore(@ApplicationContext context: Context): DataStore<CountryNamesAndDialCodes> =
-        DataStoreFactory.create(serializer = CountryNamesAndDialCodesSerializer, produceFile = {
+        DataStoreFactory.create(serializer = CountryNamesAndDialCodesSerializer) {
             context.dataStoreFile(
                 COUNTRY_NAMES_AND_DIAL_CODES_FILE_NAME
             )
-        })
+        }
 
     @SelectedCountryDataStore
     @Singleton
     @Provides
     fun providesSelectedCountryDataStore(@ApplicationContext context: Context): DataStore<SelectedCountry> =
-        DataStoreFactory.create(serializer = SelectedCountrySerializer, produceFile = {
+        DataStoreFactory.create(serializer = SelectedCountrySerializer) {
             context.dataStoreFile(
                 SAVED_SELECTED_COUNTRY_FILE_NAME
             )
-        })
+        }
 }
 
 const val COUNTRY_NAMES_AND_DIAL_CODES_FILE_NAME = "country_names_and_dial_codes.pb"
