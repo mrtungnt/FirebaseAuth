@@ -4,7 +4,7 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
 
-class CountryNamesAndCallingCodesPagingSource(private val countryNamesAndCallingCodesSource: CountryNamesAndCallingCodesSource) :
+class CountryNamesAndCallingCodesPagingRepository(private val countryNamesAndCallingCodesSource: CountryNamesAndCallingCodesSource) :
     PagingSource<Int, CountryNamesAndCallingCodesModel>() {
 
     /**
@@ -15,10 +15,21 @@ class CountryNamesAndCallingCodesPagingSource(private val countryNamesAndCalling
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CountryNamesAndCallingCodesModel> {
         return try {
             val pageNumber = params.key ?: 1
+
+            val prevKey = if (pageNumber > 0) pageNumber - 1 else null
+
+            val data = countryNamesAndCallingCodesSource.getCountryNamesAndCallingCodesInPages(
+                pageNumber
+            )
+
+            // This API defines that it's out of data when a page returns empty. When out of
+            // data, we return `null` to signify no more pages should be loaded
+            val nextKey = if (data.isNotEmpty()) pageNumber + 1 else null
+
             LoadResult.Page(
                 data = countryNamesAndCallingCodesSource.getCountryNamesAndCallingCodesInPages(
                     pageNumber
-                ), prevKey = 1, nextKey = 3
+                ), prevKey = prevKey, nextKey = nextKey
             )
         } catch (exc: Exception) {
             LoadResult.Error(exc)
@@ -52,6 +63,9 @@ class CountryNamesAndCallingCodesPagingSource(private val countryNamesAndCalling
      * to allow [load] decide what default key to use.
      */
     override fun getRefreshKey(state: PagingState<Int, CountryNamesAndCallingCodesModel>): Int? {
-        TODO("Not yet implemented")
+        return state.anchorPosition?.let { anchorPosition ->
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
+        }
     }
 }

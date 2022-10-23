@@ -4,25 +4,17 @@ import android.content.Context
 import com.example.firebaseauth.R
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import timber.log.Timber
+import javax.inject.Inject
 
-class CountryNamesAndCallingCodesSource(@ApplicationContext context: Context) {
-    val PageSize = 100
+class CountryNamesAndCallingCodesSource @Inject constructor(val context: Context) {
+    val pageSize = 100
 
-    private lateinit var countryNamesAndCallingCodes: List<CountryNamesAndCallingCodesModel>
-
-    init {
-        CoroutineScope(Dispatchers.Default).launch {
-            countryNamesAndCallingCodes =
-                getCountryNamesAndCallingCodesFromJson(context.resources.getStringArray(R.array.countries))
-        }
-    }
+    private var countryNamesAndCallingCodes: List<CountryNamesAndCallingCodesModel> = emptyList()
 
     private suspend fun getCountryNamesAndCallingCodesFromJson(
         countryNamesAndCallingCodesInJsonStringsList: Array<String>
@@ -40,28 +32,36 @@ class CountryNamesAndCallingCodesSource(@ApplicationContext context: Context) {
                     )
                 )
             }
+
+            return@withContext countryNamesAndCallingCodes.flatMap { it.toList() }
+
         } catch (exc: Exception) {
             Timber.e(exc.message)
+            throw exc
         }
-
-        return@withContext countryNamesAndCallingCodes.flatMap { it.toList() }
     }
 
     suspend fun getCountryNamesAndCallingCodesInPages(pageNumber: Int) =
         withContext(context = Dispatchers.Default) {
             try {
+                if (countryNamesAndCallingCodes.isEmpty())
+                    countryNamesAndCallingCodes =
+                        getCountryNamesAndCallingCodesFromJson(context.resources.getStringArray(R.array.countries))
+
                 if (countryNamesAndCallingCodes.isNotEmpty()) {
-                    return@withContext countryNamesAndCallingCodes.subList(
-                        pageNumber * PageSize,
-                        (pageNumber * PageSize + PageSize).coerceAtMost(countryNamesAndCallingCodes.count())
-                    )
+                    return@withContext countryNamesAndCallingCodes.count()
+                        .let { (pageNumber * pageSize + pageSize).coerceAtMost(it) }.let {
+                            countryNamesAndCallingCodes.subList(
+                                pageNumber * pageSize,
+                                it
+                            )
+                        }
                 } else {
                     throw Exception("Empty list.")
                 }
             } catch (exc: Exception) {
                 Timber.e(exc.message)
+                throw exc
             }
-
-            return@withContext emptyList()
         }
 }

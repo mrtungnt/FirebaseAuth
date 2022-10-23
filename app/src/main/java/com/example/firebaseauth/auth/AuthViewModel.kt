@@ -9,9 +9,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
 import com.example.firebaseauth.CountryNamesAndDialCodes
+import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
 import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
 import com.example.firebaseauth.data.SavedSelectedCountryRepository
+import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesPagingRepository
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
@@ -26,6 +30,7 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val countryNamesAndDialCodesRepository: CountryNamesAndDialCodesRepository,
     private val savedSelectedCountryRepository: SavedSelectedCountryRepository,
+    private val countryNamesAndCallingCodesPagingRepository: CountryNamesAndCallingCodesPagingRepository,
     val authUIState: AuthUIState,
     private val savedState: SavedStateHandle
 ) :
@@ -44,6 +49,13 @@ class AuthViewModel @Inject constructor(
     val countriesAndDialCodes get() = _countriesAndDialCodes
 
     val flowOfSavedSelectedCountry get() = savedSelectedCountryRepository.getFlowOfSelectedCountry()
+
+    val countryNamesAndCallingCodesPager = Pager<Int, CountryNamesAndCallingCodesModel>(
+        PagingConfig(
+            pageSize = 100,
+            enablePlaceholders = true
+        )
+    ) { countryNamesAndCallingCodesPagingRepository }
 
     private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage
@@ -161,7 +173,8 @@ class AuthViewModel @Inject constructor(
     fun onRequestTimeout() {
         val authRequestUIState =
             authUIStateFlow.value.authRequestUIState.copy(isRequestTimeout = true)
-        savedState[stateKeyName] = authUIStateFlow.value.copy(authRequestUIState = authRequestUIState)
+        savedState[stateKeyName] =
+            authUIStateFlow.value.copy(authRequestUIState = authRequestUIState)
     }
 
     fun onVerificationTimeout() {

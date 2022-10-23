@@ -8,6 +8,7 @@ import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthUIState
 import com.example.firebaseauth.data.*
+import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesSource
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -40,7 +41,7 @@ abstract class ServiceBindersModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AuthHomeUIStateModule{
+object AuthHomeUIStateModule {
     @Singleton
     @Provides
     fun providesAuthHomeUIState(): AuthUIState.AuthHomeUIState = AuthUIState.AuthHomeUIState(
@@ -71,6 +72,10 @@ object ClassProvidersModule {
             isVerificationTimeout = false
         )
 
+    @Singleton
+    @Provides
+    fun providesCountryNamesAndDialCodesLocalSource(@ApplicationContext context: Context) =
+        CountryNamesAndCallingCodesSource(context)
 
     @CountryNamesAndDialCodesDataStore
     @Singleton
