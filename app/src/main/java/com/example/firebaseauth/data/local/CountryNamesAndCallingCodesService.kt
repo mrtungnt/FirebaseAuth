@@ -3,7 +3,6 @@ package com.example.firebaseauth.data.local
 import android.content.Context
 import com.example.firebaseauth.R
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
@@ -11,7 +10,7 @@ import kotlinx.serialization.json.Json
 import timber.log.Timber
 import javax.inject.Inject
 
-class CountryNamesAndCallingCodesSource @Inject constructor(val context: Context) {
+class CountryNamesAndCallingCodesService @Inject constructor(val context: Context) {
     val pageSize = 100
 
     private var countryNamesAndCallingCodes: List<CountryNamesAndCallingCodesModel> = emptyList()
@@ -51,6 +50,7 @@ class CountryNamesAndCallingCodesSource @Inject constructor(val context: Context
                 if (countryNamesAndCallingCodes.isNotEmpty()) {
                     return@withContext countryNamesAndCallingCodes.count()
                         .let { (pageNumber * pageSize + pageSize).coerceAtMost(it) }.let {
+                            Timber.d("${(pageNumber * pageSize + pageSize).coerceAtMost(it)}")
                             countryNamesAndCallingCodes.subList(
                                 pageNumber * pageSize,
                                 it

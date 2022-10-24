@@ -77,7 +77,9 @@ fun AuthActivity.HomeContent() {
                         )
                     }
                     composable(route = "CountryNamesAndCallingCodesScreen") {
-                        CountryNamesAndCallingCodesScreen {
+                        CountryNamesAndCallingCodesScreen(
+                            pager = authViewModel.countryNamesAndCallingCodesPager,
+                            onSelectCountry = { authViewModel.setSelectedCountry(it) }) {
                             navController.navigate(
                                 "AuthHomeScreen"
                             ) { popUpTo("AuthHomeScreen") { inclusive = true } }

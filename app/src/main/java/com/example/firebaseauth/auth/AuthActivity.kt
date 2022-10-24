@@ -104,7 +104,7 @@ class AuthActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun getFromLocation(location: Location): List<Address> {
+    private suspend fun getFromLocation(location: Location): List<Address>? {
         return withContext(context = lifecycleScope.coroutineContext + Dispatchers.IO) {
             try {
                 Geocoder(applicationContext).getFromLocation(
@@ -130,7 +130,7 @@ class AuthActivity : ComponentActivity() {
             if (it != null) {
                 lifecycleScope.launch {
                     val address = getFromLocation(it)
-                    if (address.isNotEmpty()) {
+                    if (address?.isNotEmpty() == true) {
                         authViewModel.setSelectedCountry(address.first().countryName)
                         authViewModel.updateSnackbar("Đã xác định quốc gia từ vị trí.")
                     }

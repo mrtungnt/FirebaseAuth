@@ -3,8 +3,9 @@ package com.example.firebaseauth.data.local
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
+import javax.inject.Inject
 
-class CountryNamesAndCallingCodesPagingRepository(private val countryNamesAndCallingCodesSource: CountryNamesAndCallingCodesSource) :
+class CountryNamesAndCallingCodesPagingSource @Inject constructor( private val countryNamesAndCallingCodesService: CountryNamesAndCallingCodesService) :
     PagingSource<Int, CountryNamesAndCallingCodesModel>() {
 
     /**
@@ -14,11 +15,11 @@ class CountryNamesAndCallingCodesPagingRepository(private val countryNamesAndCal
      */
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CountryNamesAndCallingCodesModel> {
         return try {
-            val pageNumber = params.key ?: 1
+            val pageNumber = params.key ?: 0
 
             val prevKey = if (pageNumber > 0) pageNumber - 1 else null
 
-            val data = countryNamesAndCallingCodesSource.getCountryNamesAndCallingCodesInPages(
+            val data = countryNamesAndCallingCodesService.getCountryNamesAndCallingCodesInPages(
                 pageNumber
             )
 
@@ -27,7 +28,7 @@ class CountryNamesAndCallingCodesPagingRepository(private val countryNamesAndCal
             val nextKey = if (data.isNotEmpty()) pageNumber + 1 else null
 
             LoadResult.Page(
-                data = countryNamesAndCallingCodesSource.getCountryNamesAndCallingCodesInPages(
+                data = countryNamesAndCallingCodesService.getCountryNamesAndCallingCodesInPages(
                     pageNumber
                 ), prevKey = prevKey, nextKey = nextKey
             )
@@ -68,4 +69,6 @@ class CountryNamesAndCallingCodesPagingRepository(private val countryNamesAndCal
             anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
     }
+
+    val pageSize = countryNamesAndCallingCodesService.pageSize
 }

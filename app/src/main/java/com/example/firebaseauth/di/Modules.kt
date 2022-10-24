@@ -8,7 +8,7 @@ import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthUIState
 import com.example.firebaseauth.data.*
-import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesSource
+import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesService
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -75,7 +75,7 @@ object ClassProvidersModule {
     @Singleton
     @Provides
     fun providesCountryNamesAndDialCodesLocalSource(@ApplicationContext context: Context) =
-        CountryNamesAndCallingCodesSource(context)
+        CountryNamesAndCallingCodesService(context)
 
     @CountryNamesAndDialCodesDataStore
     @Singleton
