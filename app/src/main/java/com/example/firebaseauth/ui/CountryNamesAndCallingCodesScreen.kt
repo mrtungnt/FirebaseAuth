@@ -1,21 +1,24 @@
 package com.example.firebaseauth.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.paging.Pager
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
+import com.example.firebaseauth.R
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
-import timber.log.Timber
 
 @Composable
 fun CountryNamesAndCallingCodesScreen(
@@ -24,32 +27,27 @@ fun CountryNamesAndCallingCodesScreen(
     onNavigateToAuthHomeScreen: () -> Unit,
 ) {
     Column {
-        Text(
-            text = "Back",
-            modifier = Modifier.clickable(onClick = { onNavigateToAuthHomeScreen() })
+        Image(
+            painter = painterResource(R.drawable.ic_baseline_keyboard_backspace_24),
+            contentDescription = null,
+            modifier = Modifier
+                .clickable(onClick = { onNavigateToAuthHomeScreen() })
+                .padding(3.dp)
         )
-        val lazyPagingItems = pager.flow.collectAsLazyPagingItems()
 
-        var colorAlternator = remember {
-            1
-        }
-        var count = remember {
-            0
-        }
+        val lazyPagingItems = pager.flow.collectAsLazyPagingItems()
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(items = lazyPagingItems, key = { it.alpha2Code }) { country ->
                 CountryNamesAndCallingCodesRow(
                     country = country,
-                    colorAlternatorProvider = { colorAlternator }
+                    colorAlternatorProvider = { country?.ordinal!! % 2 }
                 ) {
                     onSelectCountry(
                         it?.name ?: ""
                     )
                     onNavigateToAuthHomeScreen()
                 }
-                Timber.d("${++count}: ${country?.name}: $colorAlternator ")
-                colorAlternator *= (-1)
             }
         }
     }
@@ -63,9 +61,10 @@ fun CountryNamesAndCallingCodesRow(
 ) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .clickable { onClickItem(country) }
-            .background(Color(if (colorAlternatorProvider() > 0) 0xFFD4EFFA else 0xFFCEEAF3))
+            .background(Color(if (colorAlternatorProvider() == 0) 0xFFB1F6FB else 0xFFAEECF0)),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = country?.name ?: "", modifier = Modifier
@@ -75,21 +74,20 @@ fun CountryNamesAndCallingCodesRow(
 
         Box(
             modifier = Modifier
-                .background(Color(if (colorAlternatorProvider() > 0) 0xFFD4EAFA else 0xFFCEE6F3))
-                .wrapContentHeight()
+                .fillMaxWidth(.3f)
+                .fillMaxHeight()
+                .background(Color(if (colorAlternatorProvider() == 0) 0xFFB1EAF6 else 0xFFB1E5FB)),
+            contentAlignment = Alignment.Center
         ) {
             Text(
-                text = country?.alpha2Code ?: "",
-                modifier = Modifier.fillMaxWidth(.7f),
-                textAlign = TextAlign.Center
+                text = country?.alpha2Code ?: "", textAlign = TextAlign.Center
             )
         }
 
         Text(
-            text = country?.callingCodes?.get(0) ?: "",
+            text = "+${country?.callingCodes?.get(0) ?: ""}",
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
                 .padding(end = 5.dp),
             textAlign = TextAlign.Right
         )
@@ -101,12 +99,16 @@ fun CountryNamesAndCallingCodesRow(
 fun CountryNamesAndCallingCodesRowPreview() {
     Column(modifier = Modifier.fillMaxSize()) {
         CountryNamesAndCallingCodesRow(
-            CountryNamesAndCallingCodesModel("Vietnam", "VN", listOf("+84")),
-            {1}
+            CountryNamesAndCallingCodesModel(
+                name = "Vietnam",
+                alpha2Code = "VN",
+                callingCodes = listOf("84")
+            ),
+            { 1 % 2 }
         ) {}
         CountryNamesAndCallingCodesRow(
-            CountryNamesAndCallingCodesModel("USA", "US", listOf("+1")),
-            {-1}
+            CountryNamesAndCallingCodesModel("USA", "US", listOf("1")),
+            { 2 % 2 }
         ) {}
     }
 }

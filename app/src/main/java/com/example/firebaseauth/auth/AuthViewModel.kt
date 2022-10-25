@@ -15,7 +15,7 @@ import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
 import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
 import com.example.firebaseauth.data.SavedSelectedCountryRepository
-import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesPagingSource
+import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesRepository
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
@@ -30,7 +30,7 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val countryNamesAndDialCodesRepository: CountryNamesAndDialCodesRepository,
     private val savedSelectedCountryRepository: SavedSelectedCountryRepository,
-    private val countryNamesAndCallingCodesPagingSource: CountryNamesAndCallingCodesPagingSource,
+    private val countryNamesAndCallingCodesRepository: CountryNamesAndCallingCodesRepository,
     val authUIState: AuthUIState,
     private val savedState: SavedStateHandle
 ) :
@@ -52,10 +52,10 @@ class AuthViewModel @Inject constructor(
 
     val countryNamesAndCallingCodesPager = Pager<Int, CountryNamesAndCallingCodesModel>(
         PagingConfig(
-            pageSize = countryNamesAndCallingCodesPagingSource.pageSize,
+            pageSize = countryNamesAndCallingCodesRepository.pageSize,
 //            enablePlaceholders = true
         )
-    ) { countryNamesAndCallingCodesPagingSource }
+    ) { countryNamesAndCallingCodesRepository }
 
     private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage

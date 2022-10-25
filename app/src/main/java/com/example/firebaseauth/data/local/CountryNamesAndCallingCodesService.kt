@@ -64,4 +64,28 @@ class CountryNamesAndCallingCodesService @Inject constructor(val context: Contex
                 throw exc
             }
         }
+
+    suspend fun searchCountryNamesAndCallingCodes(keyword: String) {
+        withContext(context = Dispatchers.Default) {
+            try {
+                if (countryNamesAndCallingCodes.isEmpty())
+                    countryNamesAndCallingCodes =
+                        getCountryNamesAndCallingCodesFromJson(context.resources.getStringArray(R.array.countries))
+
+                if (countryNamesAndCallingCodes.isNotEmpty()) {
+                    return@withContext countryNamesAndCallingCodes.filter {
+                        it.name.contains(keyword, ignoreCase = true) || it.alpha2Code.contains(
+                            keyword,
+                            ignoreCase = true
+                        ) || it.callingCodes.any { cC -> cC.contains(keyword, ignoreCase = true) }
+                    }
+                } else {
+                    throw Exception("Empty list.")
+                }
+            } catch (exc: Exception) {
+                Timber.e(exc.message)
+                throw exc
+            }
+        }
+    }
 }

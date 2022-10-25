@@ -9,7 +9,7 @@ import javax.inject.Inject
 interface SavedSelectedCountryRepository{
     suspend fun saveSelectedCountry(selectedCountry: CountryNamesAndDialCodes.NameAndDialCode)
 
-    fun getFlowOfSelectedCountry(): Flow<SelectedCountry>
+    fun     getFlowOfSelectedCountry(): Flow<SelectedCountry>
 }
 
 class SavedSelectedCountryRepositoryImpl @Inject constructor(private val localSource: SelectedCountryLocalSource):SavedSelectedCountryRepository {
