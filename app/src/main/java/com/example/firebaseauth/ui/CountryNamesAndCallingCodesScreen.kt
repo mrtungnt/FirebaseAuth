@@ -1,10 +1,11 @@
 package com.example.firebaseauth.ui
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,13 +28,17 @@ fun CountryNamesAndCallingCodesScreen(
     onNavigateToAuthHomeScreen: () -> Unit,
 ) {
     Column {
-        Image(
-            painter = painterResource(R.drawable.ic_baseline_keyboard_backspace_24),
-            contentDescription = null,
-            modifier = Modifier
-                .clickable(onClick = { onNavigateToAuthHomeScreen() })
-                .padding(3.dp)
-        )
+        Row() {
+            Image(
+                painter = painterResource(R.drawable.ic_baseline_keyboard_backspace_24),
+                contentDescription = null,
+                modifier = Modifier
+                    .clickable(onClick = { onNavigateToAuthHomeScreen() })
+                    .padding(3.dp)
+            )
+
+
+        }
 
         val lazyPagingItems = pager.flow.collectAsLazyPagingItems()
 
@@ -54,6 +59,37 @@ fun CountryNamesAndCallingCodesScreen(
 }
 
 @Composable
+fun TopBar() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_baseline_keyboard_backspace_24),
+            contentDescription = null,
+            modifier = Modifier
+                .clickable(onClick = { })
+                .padding(3.dp)
+        )
+
+        BasicTextField(
+            value = "",
+            onValueChange = {},
+            modifier = Modifier
+                .width(300.dp)
+//                .height(40.dp)
+                .padding(5.dp)
+                .border(
+                    border = BorderStroke(width = 1.dp, color = Color.LightGray),
+                    shape = MaterialTheme.shapes.medium
+                ),
+//            shape = MaterialTheme.shapes.medium
+        )
+    }
+}
+
+@Composable
 fun CountryNamesAndCallingCodesRow(
     country: CountryNamesAndCallingCodesModel?,
     colorAlternatorProvider: () -> Int,
@@ -61,22 +97,22 @@ fun CountryNamesAndCallingCodesRow(
 ) {
     Row(
         modifier = Modifier
-            .height(IntrinsicSize.Min)
+            .height(IntrinsicSize.Max)
             .clickable { onClickItem(country) }
-            .background(Color(if (colorAlternatorProvider() == 0) 0xFFB1F6FB else 0xFFAEECF0)),
+            .background(Color(if (colorAlternatorProvider() == 0) 0xFFEEFEF1 else 0xFFEAF8ED)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = country?.name ?: "", modifier = Modifier
-                .fillMaxWidth(.7f)
+                .fillMaxWidth(.8f)
                 .padding(start = 5.dp)
         )
 
         Box(
             modifier = Modifier
-                .fillMaxWidth(.3f)
+                .fillMaxWidth(.4f)
                 .fillMaxHeight()
-                .background(Color(if (colorAlternatorProvider() == 0) 0xFFB1EAF6 else 0xFFB1E5FB)),
+                .background(Color(if (colorAlternatorProvider() == 0) 0xFFEAFFEE else 0xFFEBFEEF)),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -97,7 +133,7 @@ fun CountryNamesAndCallingCodesRow(
 @Preview(showBackground = true)
 @Composable
 fun CountryNamesAndCallingCodesRowPreview() {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier/*.fillMaxSize()*/) {
         CountryNamesAndCallingCodesRow(
             CountryNamesAndCallingCodesModel(
                 name = "Vietnam",
@@ -107,8 +143,14 @@ fun CountryNamesAndCallingCodesRowPreview() {
             { 1 % 2 }
         ) {}
         CountryNamesAndCallingCodesRow(
-            CountryNamesAndCallingCodesModel("USA", "US", listOf("1")),
+            CountryNamesAndCallingCodesModel("El Salvador", "EL", listOf("1")),
             { 2 % 2 }
         ) {}
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun TopBarPreview() {
+    TopBar()
 }

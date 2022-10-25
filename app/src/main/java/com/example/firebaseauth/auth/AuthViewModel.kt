@@ -57,6 +57,8 @@ class AuthViewModel @Inject constructor(
         )
     ) { countryNamesAndCallingCodesRepository }
 
+    var countryNamesAndCallingCodesSearchResult by mutableStateOf(emptyList<CountryNamesAndCallingCodesModel>())
+
     private var _connectionExceptionMessage: String by mutableStateOf("")
     val connectionExceptionMessage get() = _connectionExceptionMessage
 
@@ -213,6 +215,13 @@ class AuthViewModel @Inject constructor(
                 locationCancellationTokenSource = CancellationTokenSource()
                 locationCancellationToken = locationCancellationTokenSource.token
             }
+        }
+    }
+
+    fun searchCountryNamesAndCallingCodes(keyword: String) {
+        viewModelScope.launch {
+            countryNamesAndCallingCodesSearchResult =
+                countryNamesAndCallingCodesRepository.searchCountryNamesAndCallingCodes(keyword)
         }
     }
 }

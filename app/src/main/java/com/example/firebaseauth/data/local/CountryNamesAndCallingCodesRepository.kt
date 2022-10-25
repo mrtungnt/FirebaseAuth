@@ -71,6 +71,6 @@ class CountryNamesAndCallingCodesRepository @Inject constructor(private val coun
 
     val pageSize = countryNamesAndCallingCodesService.pageSize
 
-    suspend fun getAllCountryNamesAndCallingCodes() =
-        countryNamesAndCallingCodesService.searchCountryNamesAndCallingCodes()
+    suspend fun searchCountryNamesAndCallingCodes(keyword: String) =
+        countryNamesAndCallingCodesService.searchCountryNamesAndCallingCodes(keyword)
 }

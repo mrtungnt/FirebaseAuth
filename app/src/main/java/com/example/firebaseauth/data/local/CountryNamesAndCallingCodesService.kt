@@ -65,7 +65,7 @@ class CountryNamesAndCallingCodesService @Inject constructor(val context: Contex
             }
         }
 
-    suspend fun searchCountryNamesAndCallingCodes(keyword: String) {
+    suspend fun searchCountryNamesAndCallingCodes(keyword: String) =
         withContext(context = Dispatchers.Default) {
             try {
                 if (countryNamesAndCallingCodes.isEmpty())
@@ -87,5 +87,4 @@ class CountryNamesAndCallingCodesService @Inject constructor(val context: Contex
                 throw exc
             }
         }
-    }
 }
