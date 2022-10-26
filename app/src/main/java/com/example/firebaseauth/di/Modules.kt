@@ -1,11 +1,10 @@
+/*
 package com.example.firebaseauth.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
-import com.example.firebaseauth.CountryNamesAndDialCodes
-import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthUIState
 import com.example.firebaseauth.data.*
 import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesService
@@ -100,3 +99,4 @@ object ClassProvidersModule {
 
 const val COUNTRY_NAMES_AND_DIAL_CODES_FILE_NAME = "country_names_and_dial_codes.pb"
 const val SAVED_SELECTED_COUNTRY_FILE_NAME = "saved_selected_country.pb"
+*/

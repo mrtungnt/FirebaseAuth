@@ -1,20 +1,22 @@
 package com.example.firebaseauth.data
 
+import com.example.firebaseauth.CountryNamesAndCallingCodes
 import com.example.firebaseauth.CountryNamesAndDialCodes
+import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesService
 import com.example.firebaseauth.data.local.CountryNamesAndDialCodesLocalSource
 import com.example.firebaseauth.data.network.CountriesAndDialCodesRemoteSource
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 interface CountryNamesAndDialCodesRepository {
-    suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes>
+    suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndCallingCodes>
 }
 
 class CountryNamesAndDialCodesRepositoryImpl @Inject constructor(
-    private val remoteSource: CountriesAndDialCodesRemoteSource,
-    private val localSource: CountryNamesAndDialCodesLocalSource
+    private val countryNamesAndCallingCodesService: CountryNamesAndCallingCodesService
 ):CountryNamesAndDialCodesRepository {
-    override suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndDialCodes> {
+    override suspend fun getCountriesAndDialCodes(): Result<CountryNamesAndCallingCodes> {
+        countryNamesAndCallingCodesService.getCountryNamesAndCallingCodes()
         return when {
             localSource.getData().first().entriesCount > 0 -> Result.success(
                 localSource.getData().first()

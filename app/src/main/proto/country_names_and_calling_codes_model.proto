@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option java_package = "com.example.firebaseauth";
+option java_multiple_files = true;
+
+message CountryNamesAndCallingCodes{
+  message NameAndCallingCode{
+    string name = 1;
+    repeated string calling_code = 2;
+  }
+  repeated NameAndCallingCode entries = 1;
+}
+

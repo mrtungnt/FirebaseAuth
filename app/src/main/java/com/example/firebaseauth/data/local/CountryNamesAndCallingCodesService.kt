@@ -65,6 +65,23 @@ class CountryNamesAndCallingCodesService @Inject constructor(val context: Contex
             }
         }
 
+    suspend fun getCountryNamesAndCallingCodes() = withContext(context = Dispatchers.Default) {
+        try {
+            if (countryNamesAndCallingCodes.isEmpty())
+                countryNamesAndCallingCodes =
+                    getCountryNamesAndCallingCodesFromJson(context.resources.getStringArray(R.array.countries))
+
+            if (countryNamesAndCallingCodes.isNotEmpty()) {
+                return@withContext countryNamesAndCallingCodes
+            } else {
+                throw Exception("Empty list.")
+            }
+        } catch (exc: Exception) {
+            Timber.e(exc.message)
+            throw exc
+        }
+    }
+
     suspend fun searchCountryNamesAndCallingCodes(keyword: String) =
         withContext(context = Dispatchers.Default) {
             try {

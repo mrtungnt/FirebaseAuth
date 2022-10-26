@@ -11,10 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
-import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
-import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
-import com.example.firebaseauth.data.SavedSelectedCountryRepository
 import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesRepository
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.Task
@@ -43,10 +40,11 @@ class AuthViewModel @Inject constructor(
 
     val authUIStateFlow = savedState.getStateFlow(stateKeyName, authUIState)
 
-    private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode> by mutableStateOf(
+private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode> by mutableStateOf(
         emptyList()
     )
-    val countriesAndDialCodes get() = _countriesAndDialCodes
+
+//    val countriesAndDialCodes get() = _countriesAndDialCodes
 
     val flowOfSavedSelectedCountry get() = savedSelectedCountryRepository.getFlowOfSelectedCountry()
 
@@ -72,6 +70,8 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+
+
 
     fun logUserOut() {
         Firebase.auth.signOut()
@@ -145,11 +145,11 @@ class AuthViewModel @Inject constructor(
         )
     }
 
-    fun saveSelectedCountry(selectedCountry: CountryNamesAndDialCodes.NameAndDialCode) {
-        viewModelScope.launch {
-            savedSelectedCountryRepository.saveSelectedCountry(selectedCountry)
-        }
-    }
+//    fun saveSelectedCountry(selectedCountry: SelectedCountry) {
+//        viewModelScope.launch {
+//            savedSelectedCountryRepository.saveSelectedCountry(selectedCountry)
+//        }
+//    }
 
     fun setSelectedCountry(countryName: String) {
         viewModelScope.launch {
@@ -161,6 +161,8 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+
+
 
     fun setShouldShowLandingScreen(decision: Boolean) {
         val authHomeUIState =
@@ -223,5 +225,9 @@ class AuthViewModel @Inject constructor(
             countryNamesAndCallingCodesSearchResult =
                 countryNamesAndCallingCodesRepository.searchCountryNamesAndCallingCodes(keyword)
         }
+    }
+
+    fun clearCountryNamesAndCallingCodesSearchResult() {
+        countryNamesAndCallingCodesSearchResult = emptyList()
     }
 }

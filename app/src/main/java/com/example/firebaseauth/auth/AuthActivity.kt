@@ -25,7 +25,6 @@ import androidx.compose.runtime.*
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.firebaseauth.ui.HomeContent
 import com.example.firebaseauth.ui.NoConnectionScreen
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
@@ -86,10 +85,11 @@ class AuthActivity : ComponentActivity() {
             shouldShowRequestPermissionRationale(
                 this, Manifest.permission.ACCESS_COARSE_LOCATION
             ) -> {
-                /*authViewModel.updateSnackbar(
+authViewModel.updateSnackbar(
                     "Hãy cho phép dùng Định vị (Location) để sử dụng tính năng này.",
                     duration = SnackbarDuration.Short
-                )*/
+                )
+
                 authViewModel.openLocationRequestPermissionRationaleDialog()
             }
 
@@ -131,7 +131,7 @@ class AuthActivity : ComponentActivity() {
                 lifecycleScope.launch {
                     val address = getFromLocation(it)
                     if (address?.isNotEmpty() == true) {
-                        authViewModel.setSelectedCountry(address.first().countryName)
+//                        authViewModel.setSelectedCountry(address.first().countryName)
                         authViewModel.updateSnackbar("Đã xác định quốc gia từ vị trí.")
                     }
                 }
@@ -166,8 +166,10 @@ class AuthActivity : ComponentActivity() {
                         val pendingIntent: PendingIntent = status.resolution!!
 //                        Preconditions.checkNotNull(pendingIntent)
                         intentSenderForEnablingLocation.launch(
-                            IntentSenderRequest.Builder(pendingIntent.intentSender)/*.setFillInIntent(null)
-                                .setFlags(0, 0)*/.build()
+                            IntentSenderRequest.Builder(pendingIntent.intentSender)
+.setFillInIntent(null)
+                                .setFlags(0, 0)
+.build()
                         )
                     }
                 } catch (sendEx: IntentSender.SendIntentException) {
@@ -211,9 +213,10 @@ class AuthActivity : ComponentActivity() {
             authViewModel.onRequestInProgress(inProgress)
         }
 
-        /*override fun onLoggingProgress(progress: Boolean) {
+override fun onLoggingProgress(progress: Boolean) {
             TODO("Not yet implemented")
-        }*/
+        }
+
     }
 
     val phoneAuth = PhoneAuth(

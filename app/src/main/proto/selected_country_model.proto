@@ -3,8 +3,8 @@ syntax = "proto3";
 option java_package = "com.example.firebaseauth";
 option java_multiple_files = true;
 
-import "country_names_and_dial_codes_model_local.proto";
+import "country_names_and_calling_codes_model.proto";
 
 message SelectedCountry{
-  CountryNamesAndDialCodes.NameAndDialCode container = 1;
+  CountryNamesAndCallingCodes.NameAndCallingCode content = 1;
 }

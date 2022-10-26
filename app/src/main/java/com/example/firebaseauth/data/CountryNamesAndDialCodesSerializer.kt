@@ -1,3 +1,4 @@
+/*
 package com.example.firebaseauth.data
 
 import androidx.datastore.core.CorruptionException
@@ -19,3 +20,4 @@ object CountryNamesAndDialCodesSerializer : Serializer<CountryNamesAndDialCodes>
 
     override suspend fun writeTo(t: CountryNamesAndDialCodes, output: OutputStream) = t.writeTo(output)
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package com.example.firebaseauth.data.local
 
 import androidx.datastore.core.DataStore
@@ -11,4 +12,4 @@ class CountryNamesAndDialCodesLocalSource @Inject constructor(@CountryNamesAndDi
     suspend fun saveCountriesAndDialCodes(countryNamesAndDialCodes: Collection<CountryNamesAndDialCodes.NameAndDialCode>) {
         dataStore.updateData { it.toBuilder().addAllEntries(countryNamesAndDialCodes).build() }
     }
-}
+}*/

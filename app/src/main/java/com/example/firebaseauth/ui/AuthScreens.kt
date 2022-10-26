@@ -1,3 +1,4 @@
+/*
 package com.example.firebaseauth.ui
 
 import android.Manifest
@@ -18,7 +19,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -32,9 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.firebaseauth.CountryNamesAndDialCodes
 import com.example.firebaseauth.R
-import com.example.firebaseauth.SelectedCountry
 import com.example.firebaseauth.auth.AuthActivity
 import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
@@ -79,10 +77,13 @@ fun AuthActivity.HomeContent() {
                     composable(route = "CountryNamesAndCallingCodesScreen") {
                         CountryNamesAndCallingCodesScreen(
                             pager = authViewModel.countryNamesAndCallingCodesPager,
-                            onSelectCountry = { authViewModel.setSelectedCountry(it) }) {
+                            onSelectCountry = { authViewModel.setSelectedCountry(it) },
+                            onKeywordChange = { authViewModel.searchCountryNamesAndCallingCodes(it) },
+                            countryNamesAndCallingCodesSearchResultProvider = { authViewModel.countryNamesAndCallingCodesSearchResult }) {
                             navController.navigate(
                                 "AuthHomeScreen"
                             ) { popUpTo("AuthHomeScreen") { inclusive = true } }
+                            authViewModel.clearCountryNamesAndCallingCodesSearchResult()
                         }
                     }
                 }
@@ -132,9 +133,11 @@ fun AuthHomeScreen(
     }
 
     when {
-        authHomeUIState.shouldShowLandingScreen -> LandingScreen(isDoneProvider = { vm.countriesAndDialCodes.isNotEmpty() }) {
+        */
+/*authHomeUIState.shouldShowLandingScreen -> LandingScreen(isDoneProvider = { vm.countriesAndDialCodes.isNotEmpty() }) {
             vm.setShouldShowLandingScreen(false)
-        }
+        }*//*
+
 
         vm.connectionExceptionMessage.isNotEmpty() -> {
             Text(text = vm.connectionExceptionMessage)
@@ -176,7 +179,7 @@ fun AuthHomeScreen(
                             )
                             phoneNumber = if (it.isNotEmpty() && it.last().code != KEY_ENTER)
                                 it
-                            else it
+                            else ""
                         },
                         onDone = {
                             if (savedSelectedCountryState.container.dialCode.isEmpty())
@@ -355,30 +358,18 @@ fun LoginWithPhoneNumberScreen(
                         }
                         .padding(top = 30.dp)
                 ) {
-                    /*Image(
+                    */
+/*Image(
                         painter = painterResource(id = R.drawable.logo),
                         null,
                         modifier = Modifier.padding(top = 50.dp)
-                    )*/
+                    )*//*
+
                     Box {
-                        var textFieldHeight by remember {
-                            mutableStateOf(0)
-                        }
-
-                        if (textFieldHeight == 0) {
-                            OutlinedTextField(
-                                "",
-                                onValueChange = {},
-                                modifier = Modifier.layout { measurable, constraints ->
-                                    val placeable = measurable.measure(constraints)
-                                    textFieldHeight = placeable.height
-                                    layout(placeable.width, placeable.height) {}
-                                })
-                        }
-
                         OutlinedTextField(
                             value = phoneNumber,
                             onValueChange = onPhoneNumberChange,
+                            modifier = Modifier.height(IntrinsicSize.Max),
                             placeholder = {
                                 Text(
                                     text = "Số điện thoại"
@@ -387,7 +378,7 @@ fun LoginWithPhoneNumberScreen(
                             leadingIcon = {
                                 Row(
                                     modifier = Modifier
-                                        .height(with(LocalDensity.current) { textFieldHeight.toDp() })
+                                        .fillMaxHeight()
                                         .padding(end = 5.dp)
                                         .clickable(onClick = { onNavigateToCountryNamesAndCallingCodesScreen() }),
                                     verticalAlignment = Alignment.CenterVertically
@@ -427,7 +418,9 @@ fun LoginWithPhoneNumberScreen(
 
                     Button(
                         modifier = Modifier.padding(top = 18.dp),
-                        onClick = { handleLocationPermissionRequest() /* not using function reference for the sake of avoiding recomposition */ }
+                        onClick = { handleLocationPermissionRequest() */
+/* not using function reference for the sake of avoiding recomposition *//*
+ }
                     ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
                 }
 
@@ -437,7 +430,9 @@ fun LoginWithPhoneNumberScreen(
                     val countryJson = stringArrayResource(id = R.array.countries)
                     Column() {
                         Button(
-                            onClick = { onDone() /*indirect call to avoid recomposition*/ },
+                            onClick = { onDone() */
+/*indirect call to avoid recomposition*//*
+ },
                             modifier = Modifier
                                 .width(horizontalCenterColumnWidth)
                                 .padding(top = 24.dp)
@@ -629,9 +624,11 @@ fun VerifyCodeScreen(
                     .height(1.dp)
             )
 //        Divider(Modifier.height(1.dp).background(Color.LightGray))
-            /*Spacer(
+            */
+/*Spacer(
                 modifier = Modifier.height(5.dp)
-            )*/
+            )*//*
+
 
             if (hasException(exceptionMessage)) {
                 ExceptionShowBox(exceptionMessage = exceptionMessage)
@@ -741,3 +738,4 @@ fun ExceptionShowBox(exceptionMessage: String) {
         )
     }
 }
+*/
