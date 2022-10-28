@@ -1,3 +1,4 @@
+/*
 package com.example.firebaseauth.auth
 
 import android.location.Location
@@ -231,3 +232,4 @@ private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCod
         countryNamesAndCallingCodesSearchResult = emptyList()
     }
 }
+*/

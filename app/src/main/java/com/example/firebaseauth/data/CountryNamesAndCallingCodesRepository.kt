@@ -1,19 +1,24 @@
-package com.example.firebaseauth.data.local
+package com.example.firebaseauth.data
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
+import com.example.firebaseauth.CountryNameAndCallingCodeModelFromPROTO
 import javax.inject.Inject
 
-class CountryNamesAndCallingCodesRepository @Inject constructor(private val countryNamesAndCallingCodesService: CountryNamesAndCallingCodesService) :
-    PagingSource<Int, CountryNamesAndCallingCodesModel>() {
+abstract class CountryNamesAndCallingCodesRepository :
+    PagingSource<Int, CountryNameAndCallingCodeModelFromPROTO>() {
+    abstract suspend fun getCountriesAndDialCodes(): List<CountryNameAndCallingCodeModelFromPROTO>
+    abstract suspend fun searchCountryNamesAndCallingCodes(keyword: String): List<CountryNameAndCallingCodeModelFromPROTO>
+}
+
+class CountryNamesAndCallingCodesRepositoryImpl @Inject constructor(private val countryNamesAndCallingCodesService: CountryNamesAndCallingCodesService) :
+    CountryNamesAndCallingCodesRepository() {
 
     /**
      * Loading API for [PagingSource].
      *
-     * Implement this method to trigger your async load (e.g. from database or network).
-     */
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CountryNamesAndCallingCodesModel> {
+     * Implement this method to trigger your async load (e.g. from database or network).*/
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CountryNameAndCallingCodeModelFromPROTO> {
         return try {
             val pageNumber = params.key ?: 0
 
@@ -35,6 +40,9 @@ class CountryNamesAndCallingCodesRepository @Inject constructor(private val coun
             LoadResult.Error(exc)
         }
     }
+
+    override suspend fun getCountriesAndDialCodes(): List<CountryNameAndCallingCodeModelFromPROTO> =
+        countryNamesAndCallingCodesService.getCountryNamesAndCallingCodes()
 
     /**
      * Provide a [Key] used for the initial [load] for the next [PagingSource] due to invalidation
@@ -60,9 +68,8 @@ class CountryNamesAndCallingCodesRepository @Inject constructor(private val coun
      * @return [Key] passed to [load] after invalidation used for initial load of the next
      * generation. The [Key] returned by [getRefreshKey] should load pages centered around
      * user's current viewport. If the correct [Key] cannot be determined, `null` can be returned
-     * to allow [load] decide what default key to use.
-     */
-    override fun getRefreshKey(state: PagingState<Int, CountryNamesAndCallingCodesModel>): Int? {
+     * to allow [load] decide what default key to use.*/
+    override fun getRefreshKey(state: PagingState<Int, CountryNameAndCallingCodeModelFromPROTO>): Int? {
         return state.anchorPosition?.let { anchorPosition ->
             val anchorPage = state.closestPageToPosition(anchorPosition)
             anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
@@ -71,6 +78,6 @@ class CountryNamesAndCallingCodesRepository @Inject constructor(private val coun
 
     val pageSize = countryNamesAndCallingCodesService.pageSize
 
-    suspend fun searchCountryNamesAndCallingCodes(keyword: String) =
+    override suspend fun searchCountryNamesAndCallingCodes(keyword: String) =
         countryNamesAndCallingCodesService.searchCountryNamesAndCallingCodes(keyword)
 }

@@ -34,7 +34,14 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import timber.log.Timber
 
-@AndroidEntryPoint
+class AuthActivity : ComponentActivity(){
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent { Text(text = "Hi") }
+    }
+}
+
+/*@AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
     val authViewModel by viewModels<AuthViewModel>()
 
@@ -257,4 +264,4 @@ class NetworkCallbackExt(private val activity: AuthActivity) :
         super.onLost(network)
         activity.isConnected = false
     }
-}
+}*/

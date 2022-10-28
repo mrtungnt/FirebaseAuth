@@ -1,3 +1,4 @@
+/*
 package com.example.firebaseauth.ui
 
 import androidx.compose.foundation.Image
@@ -184,7 +185,9 @@ fun CountryNamesAndCallingCodesRow(
 @Preview(showBackground = true)
 @Composable
 fun CountryNamesAndCallingCodesRowPreview() {
-    Column(modifier = Modifier/*.fillMaxSize()*/) {
+    Column(modifier = Modifier*/
+/*.fillMaxSize()*//*
+) {
         CountryNamesAndCallingCodesRow(
             CountryNamesAndCallingCodesModel(
                 name = "Vietnam",
@@ -204,4 +207,4 @@ fun CountryNamesAndCallingCodesRowPreview() {
 @Composable
 fun TopBarPreview() {
     TopBar(keywordProvider = { "" }, onKeywordChange = {}, onNavigateBack = {})
-}
+}*/

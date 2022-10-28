@@ -1,21 +1,19 @@
-/*
 package com.example.firebaseauth.data
 
 import com.example.firebaseauth.data.local.SelectedCountryService
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 interface SavedSelectedCountryRepository {
-    suspend fun saveSelectedCountry(selectedCountry: SelectedCountry)
-
-    fun getFlowOfSelectedCountry(): Flow<SelectedCountry>
+    suspend fun saveSelectedCountry(selectedCountry: CountryNameAndCallingCodeModelFromJSON)
+    suspend fun getSelectedCountry(): CountryNameAndCallingCodeModelFromJSON
 }
 
 class SavedSelectedCountryRepositoryImpl @Inject constructor(private val source: SelectedCountryService) :
     SavedSelectedCountryRepository {
-    override suspend fun saveSelectedCountry(selectedCountry: SelectedCountry) {
+    override suspend fun saveSelectedCountry(selectedCountry: CountryNameAndCallingCodeModelFromJSON) {
         source.saveSelectedCountry(selectedCountry)
     }
 
-    override fun getFlowOfSelectedCountry() = source.getFlowOfSelectedCountry()
-}*/
+    override suspend fun getSelectedCountry(): CountryNameAndCallingCodeModelFromJSON =
+        source.getSelectedCountry()
+}

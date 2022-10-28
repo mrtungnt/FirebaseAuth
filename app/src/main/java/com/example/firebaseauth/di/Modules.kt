@@ -1,4 +1,3 @@
-/*
 package com.example.firebaseauth.di
 
 import android.content.Context
@@ -7,7 +6,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import com.example.firebaseauth.auth.AuthUIState
 import com.example.firebaseauth.data.*
-import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesService
+import com.example.firebaseauth.data.CountryNamesAndCallingCodesService
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -21,7 +20,7 @@ import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Qualifier
-annotation class CountryNamesAndDialCodesDataStore
+annotation class CountryNamesAndCallingCodesDataStore
 
 @Qualifier
 annotation class SelectedCountryDataStore
@@ -76,7 +75,7 @@ object ClassProvidersModule {
     fun providesCountryNamesAndDialCodesLocalSource(@ApplicationContext context: Context) =
         CountryNamesAndCallingCodesService(context)
 
-    @CountryNamesAndDialCodesDataStore
+    @CountryNamesAndCallingCodesDataStore
     @Singleton
     @Provides
     fun providesCountryNamesAndDialCodesDataStore(@ApplicationContext context: Context): DataStore<CountryNamesAndDialCodes> =
@@ -99,4 +98,3 @@ object ClassProvidersModule {
 
 const val COUNTRY_NAMES_AND_DIAL_CODES_FILE_NAME = "country_names_and_dial_codes.pb"
 const val SAVED_SELECTED_COUNTRY_FILE_NAME = "saved_selected_country.pb"
-*/

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option java_package = "com.example.firebaseauth";
+option java_multiple_files = true;
+
+message CountryNameAndCallingCodeModelFromPROTO{
+  string name = 1;
+  string alpha2Code = 2;
+  repeated string calling_code = 3;
+}
