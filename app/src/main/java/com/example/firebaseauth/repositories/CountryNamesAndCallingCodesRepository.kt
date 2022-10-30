@@ -1,14 +1,16 @@
-package com.example.firebaseauth.data
+package com.example.firebaseauth.repositories
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.example.firebaseauth.CountryNameAndCallingCodeModelFromPROTO
+import com.example.firebaseauth.services.CountryNamesAndCallingCodeModel
+import com.example.firebaseauth.services.CountryNamesAndCallingCodesService
 import javax.inject.Inject
 
 abstract class CountryNamesAndCallingCodesRepository :
-    PagingSource<Int, CountryNameAndCallingCodeModelFromPROTO>() {
-    abstract suspend fun getCountriesAndDialCodes(): List<CountryNameAndCallingCodeModelFromPROTO>
-    abstract suspend fun searchCountryNamesAndCallingCodes(keyword: String): List<CountryNameAndCallingCodeModelFromPROTO>
+    PagingSource<Int, CountryNamesAndCallingCodeModel>() {
+    abstract val pageSize: Int
+    abstract suspend fun getCountryNamesAndCallingCodes(): List<CountryNamesAndCallingCodeModel>
+    abstract suspend fun searchCountryNamesAndCallingCodes(keyword: String): List<CountryNamesAndCallingCodeModel>
 }
 
 class CountryNamesAndCallingCodesRepositoryImpl @Inject constructor(private val countryNamesAndCallingCodesService: CountryNamesAndCallingCodesService) :
@@ -18,7 +20,7 @@ class CountryNamesAndCallingCodesRepositoryImpl @Inject constructor(private val 
      * Loading API for [PagingSource].
      *
      * Implement this method to trigger your async load (e.g. from database or network).*/
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CountryNameAndCallingCodeModelFromPROTO> {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CountryNamesAndCallingCodeModel> {
         return try {
             val pageNumber = params.key ?: 0
 
@@ -41,7 +43,7 @@ class CountryNamesAndCallingCodesRepositoryImpl @Inject constructor(private val 
         }
     }
 
-    override suspend fun getCountriesAndDialCodes(): List<CountryNameAndCallingCodeModelFromPROTO> =
+    override suspend fun getCountryNamesAndCallingCodes(): List<CountryNamesAndCallingCodeModel> =
         countryNamesAndCallingCodesService.getCountryNamesAndCallingCodes()
 
     /**
@@ -69,14 +71,14 @@ class CountryNamesAndCallingCodesRepositoryImpl @Inject constructor(private val 
      * generation. The [Key] returned by [getRefreshKey] should load pages centered around
      * user's current viewport. If the correct [Key] cannot be determined, `null` can be returned
      * to allow [load] decide what default key to use.*/
-    override fun getRefreshKey(state: PagingState<Int, CountryNameAndCallingCodeModelFromPROTO>): Int? {
+    override fun getRefreshKey(state: PagingState<Int, CountryNamesAndCallingCodeModel>): Int? {
         return state.anchorPosition?.let { anchorPosition ->
             val anchorPage = state.closestPageToPosition(anchorPosition)
             anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
     }
 
-    val pageSize = countryNamesAndCallingCodesService.pageSize
+    override val pageSize = countryNamesAndCallingCodesService.pageSize
 
     override suspend fun searchCountryNamesAndCallingCodes(keyword: String) =
         countryNamesAndCallingCodesService.searchCountryNamesAndCallingCodes(keyword)

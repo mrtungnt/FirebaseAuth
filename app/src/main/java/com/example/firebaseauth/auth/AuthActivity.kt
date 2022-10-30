@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Address
@@ -25,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.firebaseauth.ui.HomeContent
 import com.example.firebaseauth.ui.NoConnectionScreen
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
@@ -34,14 +36,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import timber.log.Timber
 
-class AuthActivity : ComponentActivity(){
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { Text(text = "Hi") }
-    }
-}
-
-/*@AndroidEntryPoint
+@AndroidEntryPoint
 class AuthActivity : ComponentActivity() {
     val authViewModel by viewModels<AuthViewModel>()
 
@@ -175,7 +170,7 @@ authViewModel.updateSnackbar(
                         intentSenderForEnablingLocation.launch(
                             IntentSenderRequest.Builder(pendingIntent.intentSender)
 .setFillInIntent(null)
-                                .setFlags(0, 0)
+                                .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION, 0)
 .build()
                         )
                     }
@@ -219,11 +214,6 @@ authViewModel.updateSnackbar(
         override fun onRequestInProgress(inProgress: Boolean) {
             authViewModel.onRequestInProgress(inProgress)
         }
-
-override fun onLoggingProgress(progress: Boolean) {
-            TODO("Not yet implemented")
-        }
-
     }
 
     val phoneAuth = PhoneAuth(
@@ -264,4 +254,4 @@ class NetworkCallbackExt(private val activity: AuthActivity) :
         super.onLost(network)
         activity.isConnected = false
     }
-}*/
+}

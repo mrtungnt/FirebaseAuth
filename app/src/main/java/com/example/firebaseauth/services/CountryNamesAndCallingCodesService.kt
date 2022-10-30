@@ -1,4 +1,4 @@
-package com.example.firebaseauth.data
+package com.example.firebaseauth.services
 
 import android.content.Context
 import com.example.firebaseauth.R
@@ -14,16 +14,16 @@ class CountryNamesAndCallingCodesService @Inject constructor(
 ) {
     val pageSize = 100
 
-    private var countryNamesAndCallingCodesFromJSON: List<CountryNameAndCallingCodeModelFromJSON> =
+    private var countryNamesAndCallingCodesFromJSON: List<CountryNamesAndCallingCodeModel> =
         mutableListOf()
 
-    private suspend fun getCountryNamesAndCallingCodes(): List<CountryNameAndCallingCodeModelFromJSON> =
+    suspend fun getCountryNamesAndCallingCodes(): List<CountryNamesAndCallingCodeModel> =
         withContext(Dispatchers.Default) {
             when {
                 countryNamesAndCallingCodesFromJSON.isEmpty() -> {
                     try {
                         val listOfCountryNamesAndCallingCodesFromJSON =
-                            mutableListOf<List<CountryNameAndCallingCodeModelFromJSON>>()
+                            mutableListOf<List<CountryNamesAndCallingCodeModel>>()
 
                         val countryNamesAndCallingCodesInJsonStringsList =
                             context.resources.getStringArray(
@@ -33,7 +33,7 @@ class CountryNamesAndCallingCodesService @Inject constructor(
                         val json = Json { ignoreUnknownKeys = true }
                         countryNamesAndCallingCodesInJsonStringsList.forEach {
                             listOfCountryNamesAndCallingCodesFromJSON.add(
-                                json.decodeFromString<List<CountryNameAndCallingCodeModelFromJSON>>(
+                                json.decodeFromString<List<CountryNamesAndCallingCodeModel>>(
                                     it
                                 )
                             )
@@ -52,7 +52,7 @@ class CountryNamesAndCallingCodesService @Inject constructor(
             }
         }
 
-    suspend fun getCountryNamesAndCallingCodesInPages(pageNumber: Int): List<CountryNameAndCallingCodeModelFromJSON> =
+    suspend fun getCountryNamesAndCallingCodesInPages(pageNumber: Int): List<CountryNamesAndCallingCodeModel> =
         withContext(context = Dispatchers.Default) {
             try {
                 val countryNamesAndCallingCodes = getCountryNamesAndCallingCodes()
@@ -71,7 +71,7 @@ class CountryNamesAndCallingCodesService @Inject constructor(
             }
         }
 
-    suspend fun searchCountryNamesAndCallingCodes(keyword: String): List<CountryNameAndCallingCodeModelFromJSON> =
+    suspend fun searchCountryNamesAndCallingCodes(keyword: String): List<CountryNamesAndCallingCodeModel> =
         withContext(context = Dispatchers.Default) {
             try {
                 val countryNamesAndCallingCodes = getCountryNamesAndCallingCodes()

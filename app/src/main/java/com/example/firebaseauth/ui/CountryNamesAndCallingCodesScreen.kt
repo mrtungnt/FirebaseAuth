@@ -1,4 +1,3 @@
-/*
 package com.example.firebaseauth.ui
 
 import androidx.compose.foundation.Image
@@ -18,25 +17,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.paging.Pager
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import com.example.firebaseauth.R
-import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
+import com.example.firebaseauth.services.CountryNamesAndCallingCodeModel
 
 @Composable
 fun CountryNamesAndCallingCodesScreen(
-    pager: Pager<Int, CountryNamesAndCallingCodesModel>,
+    pager: Pager<Int, CountryNamesAndCallingCodeModel>,
     onSelectCountry: (String) -> Unit,
     onKeywordChange: (String) -> Unit,
-    countryNamesAndCallingCodesSearchResultProvider: () -> List<CountryNamesAndCallingCodesModel>,
+    countryNamesAndCallingCodesSearchResultProvider: () -> List<CountryNamesAndCallingCodeModel>,
     onNavigateToAuthHomeScreen: () -> Unit,
 ) {
     var keyword by rememberSaveable { mutableStateOf("") }
@@ -50,36 +50,49 @@ fun CountryNamesAndCallingCodesScreen(
 
         val lazyPagingItems = pager.flow.collectAsLazyPagingItems()
 
-        if (countryNamesAndCallingCodesSearchResultProvider().isEmpty())
+        if (keyword.isEmpty()) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(items = lazyPagingItems, key = { it.alpha2Code }) { country ->
-                    CountryNamesAndCallingCodesRow(
-                        country = country,
-                        colorAlternatorProvider = { country?.ordinal!! % 2 }
-                    ) {
-                        onSelectCountry(
-                            it?.name ?: ""
-                        )
-                        onNavigateToAuthHomeScreen()
+                    if (country != null) {
+                        CountryNamesAndCallingCodesRow(
+                            country = country,
+                            colorAlternatorProvider = {
+                                lazyPagingItems.itemSnapshotList.items.indexOf(
+                                    country
+                                ) % 2
+                            }
+                        ) {
+                            onSelectCountry(
+                                it.name
+                            )
+                            onNavigateToAuthHomeScreen()
+                        }
                     }
                 }
             }
-        else
+        } else {
             LazyColumn {
                 items(
                     items = countryNamesAndCallingCodesSearchResultProvider(),
                     key = { it.alpha2Code }) { country ->
-                    CountryNamesAndCallingCodesRow(
-                        country = country,
-                        colorAlternatorProvider = { country?.ordinal!! % 2 }
-                    ) {
-                        onSelectCountry(
-                            it?.name ?: ""
-                        )
-                        onNavigateToAuthHomeScreen()
+                    if (country != null) {
+                        CountryNamesAndCallingCodesRow(
+                            country = country,
+                            colorAlternatorProvider = {
+                                countryNamesAndCallingCodesSearchResultProvider().indexOf(
+                                    country
+                                ) % 2
+                            }
+                        ) {
+                            onSelectCountry(
+                                it.name
+                            )
+                            onNavigateToAuthHomeScreen()
+                        }
                     }
                 }
             }
+        }
     }
 }
 
@@ -102,14 +115,17 @@ fun TopBar(
                 .padding(3.dp)
         )
 
-        var hasFocus by rememberSaveable { mutableStateOf(false) }
+        var searchBoxHasFocus by rememberSaveable {
+            mutableStateOf(false)
+        }
 
         BasicTextField(
             value = keywordProvider(),
             onValueChange = { onKeywordChange(it) },
-            modifier = Modifier.onFocusEvent { focusState ->
-                if (!hasFocus) hasFocus = focusState.hasFocus
-            }) { innerTextField ->
+            modifier = Modifier.onFocusChanged { focusState ->
+                searchBoxHasFocus = focusState.hasFocus
+            }
+        ) { innerTextField ->
             Box(
                 modifier = Modifier
                     .height(35.dp)
@@ -122,12 +138,20 @@ fun TopBar(
                     modifier = Modifier.padding(start = 5.dp, end = 5.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    if (hasFocus)
-                        Box(modifier = Modifier.padding(start = 5.dp)) {
-                            innerTextField()
-                        }
-                    else
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.padding(start = 5.dp)) {
+                        innerTextField()
+                    }
+
+                    if (keywordProvider().isEmpty())
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.offset {
+                                IntOffset(
+                                    if (searchBoxHasFocus) 7.dp.roundToPx() else 5.dp.roundToPx(),
+                                    0
+                                )
+                            }
+                        ) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_baseline_search_24),
                                 contentDescription = "countrySearch",
@@ -143,9 +167,9 @@ fun TopBar(
 
 @Composable
 fun CountryNamesAndCallingCodesRow(
-    country: CountryNamesAndCallingCodesModel?,
+    country: CountryNamesAndCallingCodeModel,
     colorAlternatorProvider: () -> Int,
-    onClickItem: (CountryNamesAndCallingCodesModel?) -> Unit,
+    onClickItem: (CountryNamesAndCallingCodeModel) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -155,7 +179,7 @@ fun CountryNamesAndCallingCodesRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = country?.name ?: "", modifier = Modifier
+            text = country.name, modifier = Modifier
                 .fillMaxWidth(.8f)
                 .padding(start = 5.dp)
         )
@@ -168,12 +192,12 @@ fun CountryNamesAndCallingCodesRow(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = country?.alpha2Code ?: "", textAlign = TextAlign.Center
+                text = country.alpha2Code, textAlign = TextAlign.Center
             )
         }
 
         Text(
-            text = "${country?.callingCodes?.get(0) ?: ""}",
+            text = if (country.callingCodes.isNotEmpty()) country.callingCodes[0] else "",
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(end = 5.dp),
@@ -185,11 +209,12 @@ fun CountryNamesAndCallingCodesRow(
 @Preview(showBackground = true)
 @Composable
 fun CountryNamesAndCallingCodesRowPreview() {
-    Column(modifier = Modifier*/
-/*.fillMaxSize()*//*
-) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
         CountryNamesAndCallingCodesRow(
-            CountryNamesAndCallingCodesModel(
+            CountryNamesAndCallingCodeModel(
                 name = "Vietnam",
                 alpha2Code = "VN",
                 callingCodes = listOf("84")
@@ -197,7 +222,7 @@ fun CountryNamesAndCallingCodesRowPreview() {
             { 1 % 2 }
         ) {}
         CountryNamesAndCallingCodesRow(
-            CountryNamesAndCallingCodesModel("El Salvador", "EL", listOf("1")),
+            CountryNamesAndCallingCodeModel("El Salvador", "EL", listOf("1")),
             { 2 % 2 }
         ) {}
     }
@@ -207,4 +232,4 @@ fun CountryNamesAndCallingCodesRowPreview() {
 @Composable
 fun TopBarPreview() {
     TopBar(keywordProvider = { "" }, onKeywordChange = {}, onNavigateBack = {})
-}*/
+}

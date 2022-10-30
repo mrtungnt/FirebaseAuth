@@ -1,4 +1,4 @@
-package com.example.firebaseauth.data
+package com.example.firebaseauth.repositories
 
 import kotlinx.coroutines.*
 import org.junit.Assert.assertEquals

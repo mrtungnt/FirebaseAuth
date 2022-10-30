@@ -1,7 +1,8 @@
+/*
 package com.example.firebaseauth
 
-import com.example.firebaseauth.data.CountryNamesAndDialCodesRepository
-import com.example.firebaseauth.data.SavedSelectedCountryRepository
+import com.example.firebaseauth.repositories.CountryNamesAndDialCodesRepository
+import com.example.firebaseauth.repositories.SavedSelectedCountryRepository
 import com.example.firebaseauth.di.ServiceBindersModule
 import dagger.Module
 import dagger.Provides
@@ -47,4 +48,4 @@ class FakeServiceProvidersModule {
             }
         }
     }
-}
+}*/

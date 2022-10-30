@@ -1,4 +1,3 @@
-/*
 package com.example.firebaseauth.auth
 
 import android.location.Location
@@ -12,21 +11,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
-import com.example.firebaseauth.data.CountryNamesAndCallingCodesModel
-import com.example.firebaseauth.data.local.CountryNamesAndCallingCodesRepository
+import com.example.firebaseauth.repositories.CountryNamesAndCallingCodesRepository
+import com.example.firebaseauth.repositories.SavedSelectedCountryRepository
+import com.example.firebaseauth.services.CountryNamesAndCallingCodeModel
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val countryNamesAndDialCodesRepository: CountryNamesAndDialCodesRepository,
     private val savedSelectedCountryRepository: SavedSelectedCountryRepository,
     private val countryNamesAndCallingCodesRepository: CountryNamesAndCallingCodesRepository,
     val authUIState: AuthUIState,
@@ -41,37 +40,46 @@ class AuthViewModel @Inject constructor(
 
     val authUIStateFlow = savedState.getStateFlow(stateKeyName, authUIState)
 
-private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCode> by mutableStateOf(
+    private var _countriesAndCallingCodes: List<CountryNamesAndCallingCodeModel> by mutableStateOf(
         emptyList()
     )
 
-//    val countriesAndDialCodes get() = _countriesAndDialCodes
+    val countriesAndCallingCodes get() = _countriesAndCallingCodes
 
-    val flowOfSavedSelectedCountry get() = savedSelectedCountryRepository.getFlowOfSelectedCountry()
+    var savedSelectedCountryState: CountryNamesAndCallingCodeModel? by mutableStateOf(null)
 
-    val countryNamesAndCallingCodesPager = Pager<Int, CountryNamesAndCallingCodesModel>(
+    val countryNamesAndCallingCodesPager = Pager<Int, CountryNamesAndCallingCodeModel>(
         PagingConfig(
             pageSize = countryNamesAndCallingCodesRepository.pageSize,
 //            enablePlaceholders = true
         )
     ) { countryNamesAndCallingCodesRepository }
 
-    var countryNamesAndCallingCodesSearchResult by mutableStateOf(emptyList<CountryNamesAndCallingCodesModel>())
-
-    private var _connectionExceptionMessage: String by mutableStateOf("")
-    val connectionExceptionMessage get() = _connectionExceptionMessage
+    var countryNamesAndCallingCodesSearchResult by mutableStateOf(emptyList<CountryNamesAndCallingCodeModel>())
 
     init {
         viewModelScope.launch {
-            val r = countryNamesAndDialCodesRepository.getCountriesAndDialCodes()
-            if (r.isSuccess) {
-                _countriesAndDialCodes = r.getOrNull()?.entriesList!!
-            } else r.onFailure {
-                _connectionExceptionMessage = it.message!!
+            try {
+                _countriesAndCallingCodes =
+                    countryNamesAndCallingCodesRepository.getCountryNamesAndCallingCodes()
+            } catch (exc: Exception) {
+                snackbarHostState.showSnackbar(
+                    exc.message
+                        ?: "${exc.toString()} while getting country names and calling codes."
+                )
+            }
+        }
+
+        viewModelScope.launch {
+            try {
+                savedSelectedCountryState = savedSelectedCountryRepository.getSelectedCountry()
+            } catch (exc: Exception) {
+                snackbarHostState.showSnackbar(
+                    exc.message ?: "${exc.toString()} while getting selected country."
+                )
             }
         }
     }
-
 
 
     fun logUserOut() {
@@ -146,23 +154,24 @@ private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCod
         )
     }
 
-//    fun saveSelectedCountry(selectedCountry: SelectedCountry) {
-//        viewModelScope.launch {
-//            savedSelectedCountryRepository.saveSelectedCountry(selectedCountry)
-//        }
-//    }
+    fun saveSelectedCountry(selectedCountry: CountryNamesAndCallingCodeModel) {
+        viewModelScope.launch {
+            savedSelectedCountryRepository.saveSelectedCountry(selectedCountry)
+        }
+    }
 
     fun setSelectedCountry(countryName: String) {
         viewModelScope.launch {
             try {
-                saveSelectedCountry(_countriesAndDialCodes.first { it.name == countryName })
+                savedSelectedCountryState =
+                    _countriesAndCallingCodes.first { it.name == countryName }
+                saveSelectedCountry(_countriesAndCallingCodes.first { it.name == countryName })
             } catch (exc: NoSuchElementException) {
                 Timber.e("${exc.message}")
                 updateSnackbar("Không khớp được tên quốc gia")
             }
         }
     }
-
 
 
     fun setShouldShowLandingScreen(decision: Boolean) {
@@ -221,8 +230,14 @@ private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCod
         }
     }
 
+    private var lastSearchJob: Job? = null
+
     fun searchCountryNamesAndCallingCodes(keyword: String) {
         viewModelScope.launch {
+            delay(500)
+            if (lastSearchJob?.isActive == true)
+                lastSearchJob?.cancel()
+            lastSearchJob = this.coroutineContext.job
             countryNamesAndCallingCodesSearchResult =
                 countryNamesAndCallingCodesRepository.searchCountryNamesAndCallingCodes(keyword)
         }
@@ -232,4 +247,3 @@ private var _countriesAndDialCodes: List<CountryNamesAndDialCodes.NameAndDialCod
         countryNamesAndCallingCodesSearchResult = emptyList()
     }
 }
-*/
