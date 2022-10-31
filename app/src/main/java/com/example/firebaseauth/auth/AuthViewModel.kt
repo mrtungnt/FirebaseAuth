@@ -234,10 +234,12 @@ class AuthViewModel @Inject constructor(
 
     fun searchCountryNamesAndCallingCodes(keyword: String) {
         viewModelScope.launch {
-            delay(500)
-            if (lastSearchJob?.isActive == true)
+            if (lastSearchJob?.isActive == true) {
                 lastSearchJob?.cancel()
+                Timber.d("lastSearchJob was cancelled.")
+            }
             lastSearchJob = this.coroutineContext.job
+            delay(550)
             countryNamesAndCallingCodesSearchResult =
                 countryNamesAndCallingCodesRepository.searchCountryNamesAndCallingCodes(keyword)
         }

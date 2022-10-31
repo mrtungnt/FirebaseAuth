@@ -57,14 +57,18 @@ class CountryNamesAndCallingCodesService @Inject constructor(
             try {
                 val countryNamesAndCallingCodes = getCountryNamesAndCallingCodes()
 
-                countryNamesAndCallingCodes.count()
-                    .let { (pageNumber * pageSize + pageSize).coerceAtMost(it) }.let {
-                        Timber.d("${(pageNumber * pageSize + pageSize).coerceAtMost(it)}")
-                        countryNamesAndCallingCodes.subList(
-                            pageNumber * pageSize,
-                            it
-                        )
+                with(countryNamesAndCallingCodes.count())
+                {
+                    (pageNumber * pageSize + pageSize).coerceAtMost(this).let {
+                        if ((pageNumber * pageSize) < it)
+                            countryNamesAndCallingCodes.subList(
+                                pageNumber * pageSize,
+                                it
+                            )
+                        else
+                            emptyList()
                     }
+                }
             } catch (exc: Exception) {
                 Timber.e(exc.message)
                 throw exc
