@@ -239,7 +239,7 @@ class AuthViewModel @Inject constructor(
                 Timber.d("lastSearchJob was cancelled.")
             }
             lastSearchJob = this.coroutineContext.job
-            delay(550)
+            delay(450)
             countryNamesAndCallingCodesSearchResult =
                 countryNamesAndCallingCodesRepository.searchCountryNamesAndCallingCodes(keyword)
         }

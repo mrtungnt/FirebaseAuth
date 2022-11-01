@@ -29,7 +29,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import com.example.firebaseauth.R
 import com.example.firebaseauth.services.CountryNamesAndCallingCodeModel
-import timber.log.Timber
+import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 
 @Composable
 fun CountryNamesAndCallingCodesScreen(
@@ -75,20 +75,18 @@ fun CountryNamesAndCallingCodesScreen(
                 items(
                     items = countryNamesAndCallingCodesSearchResultProvider(),
                     key = { it.alpha2Code }) { country ->
-                    if (country != null) {
-                        CountryNamesAndCallingCodesRow(
-                            country = country,
-                            colorAlternatorProvider = {
-                                countryNamesAndCallingCodesSearchResultProvider().indexOf(
-                                    country
-                                ) % 2
-                            }
-                        ) {
-                            onSelectCountry(
-                                it.name
-                            )
-                            onNavigateToAuthHomeScreen()
+                    CountryNamesAndCallingCodesRow(
+                        country = country,
+                        colorAlternatorProvider = {
+                            countryNamesAndCallingCodesSearchResultProvider().indexOf(
+                                country
+                            ) % 2
                         }
+                    ) {
+                        onSelectCountry(
+                            it.name
+                        )
+                        onNavigateToAuthHomeScreen()
                     }
                 }
             }
@@ -114,92 +112,113 @@ fun TopBar(
                 .clickable(onClick = { onNavigateBack() })
                 .padding(3.dp)
         )
+        SearchBox(
+            keywordProvider = { keywordProvider() },
+            onKeywordChange = { onKeywordChange(it) })
+    }
+}
 
-        var searchBoxHasFocus by rememberSaveable {
-            mutableStateOf(false)
+@Composable
+fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) {
+    var searchBoxHasFocus by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    BasicTextField(
+        value = keywordProvider(),
+        onValueChange = { onKeywordChange(it) },
+        modifier = Modifier.onFocusChanged { focusState ->
+            searchBoxHasFocus = focusState.hasFocus
+        },
+        singleLine = true
+    ) { innerTextField ->
+        var searchBoxWidthWithFocus by remember {
+            mutableStateOf(0.dp)
         }
 
-        BasicTextField(
-            value = keywordProvider(),
-            onValueChange = { onKeywordChange(it) },
-            modifier = Modifier.onFocusChanged { focusState ->
-                searchBoxHasFocus = focusState.hasFocus
-            }
-        ) { innerTextField ->
-            var w1 by remember {
-                mutableStateOf(0.dp)
-            }
+        var searchBoxWidthWithoutFocus by remember {
+            mutableStateOf(0.dp)
+        }
 
-            var w2 by remember {
-                mutableStateOf(0.dp)
-            }
+        val searchBoxWidthAnim by animateDpAsState(targetValue = if (searchBoxHasFocus) searchBoxWidthWithFocus else searchBoxWidthWithoutFocus)
+        val density = LocalDensity.current
 
-            val searchBoxWidthAnim by animateDpAsState(targetValue = if (searchBoxHasFocus) w1 else w2)
-            val density = LocalDensity.current
-
+        @Composable
+        fun InnerSearchBox() {
             Box(
                 modifier = Modifier
-                    .height(35.dp)
+                    .padding(start = 5.dp, end = if (keywordProvider().isEmpty()) 10.dp else 29.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Box(modifier = Modifier.padding(start = 5.dp)) {
+                    innerTextField()
+                }
+                if (keywordProvider().isEmpty())
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.offset {
+                            IntOffset(
+                                if (searchBoxHasFocus) 7.dp.roundToPx() else 5.dp.roundToPx(),
+                                0
+                            )
+                        }
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_baseline_search_24),
+                            contentDescription = "countrySearch",
+                            alpha = .8f
+                        )
+                        Text("Tìm nhanh", color = Color.Gray)
+                    }
+
+            }
+        }
+
+        if (searchBoxHasFocus)
+            Box(
+                modifier = Modifier
                     .fillMaxWidth(.85f)
-                    .padding(5.dp)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
-                        w1 = with(density) { placeable.width.toDp() }
-                        Timber.d("w1: $w1")
+                        searchBoxWidthWithFocus = with(density) { placeable.width.toDp() }
                         layout(placeable.width, placeable.height) {}
                     }
             )
-
-            Box(
-                modifier = Modifier
-                    .height(35.dp)
-                    .width(132.dp)
-                    .padding(5.dp)
-                    .layout { measurable, constraints ->
-                        val placeable = measurable.measure(constraints)
-                        w2 = with(density) { placeable.width.toDp() }
-                        layout(placeable.width, placeable.height) {
-//                            placeable.placeRelative(0, 0)
-                        }
-                    }
-            )
-
-            Box(
-                modifier = Modifier
-                    .height(35.dp)
-                    .width(searchBoxWidthAnim)
-                    .padding(5.dp)
-                    .border(width = 1.dp, Color.LightGray, shape = RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 5.dp, end = 5.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Box(modifier = Modifier.padding(start = 5.dp)) {
-                        innerTextField()
-                    }
-
-                    if (keywordProvider().isEmpty())
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.offset {
-                                IntOffset(
-                                    if (searchBoxHasFocus) 7.dp.roundToPx() else 5.dp.roundToPx(),
-                                    0
-                                )
-                            }
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_baseline_search_24),
-                                contentDescription = "countrySearch",
-                                alpha = .8f
-                            )
-                            Text("Tìm nhanh", color = Color.Gray)
-                        }
-                }
+        else {
+            Box(modifier = Modifier
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    if (searchBoxWidthWithoutFocus == 0.dp)
+                        searchBoxWidthWithoutFocus = with(density) { placeable.width.toDp() }
+                    layout(placeable.width, placeable.height) {}
+                }) {
+                InnerSearchBox()
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .height(35.dp)
+                .padding(5.dp)
+                .border(width = 1.dp, Color.LightGray, shape = RoundedCornerShape(12.dp)).let {
+                    if (searchBoxHasFocus)
+                        it.width(searchBoxWidthAnim)
+                    else
+                        it
+                },
+            contentAlignment = Alignment.CenterStart
+        ) {
+            InnerSearchBox()
+
+            if (keywordProvider().isNotEmpty())
+                Image(
+                    painter = painterResource(id = R.drawable.ic_baseline_clear_24),
+                    contentDescription = "clear keyword",
+                    modifier = Modifier
+                        .padding(end = 5.dp)
+                        .align(Alignment.CenterEnd)
+                        .clickable { onKeywordChange("") }
+                )
         }
     }
 }
@@ -270,5 +289,7 @@ fun CountryNamesAndCallingCodesRowPreview() {
 @Preview(showBackground = true)
 @Composable
 fun TopBarPreview() {
-    TopBar(keywordProvider = { "" }, onKeywordChange = {}, onNavigateBack = {})
+    FirebaseAuthTheme {
+        TopBar(keywordProvider = { "" }, onKeywordChange = {}, onNavigateBack = {})
+    }
 }

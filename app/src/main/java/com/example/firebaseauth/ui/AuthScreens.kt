@@ -416,7 +416,7 @@ fun LoginWithPhoneNumberScreen(
                                 .padding(top = 24.dp)
                         ) { Text(text = "Xong") }
 
-                        val scope = rememberCoroutineScope()
+                        /*val scope = rememberCoroutineScope()
                         Button(
                             onClick = {
                                 // using coroutines here causing recomposition.
@@ -443,7 +443,7 @@ fun LoginWithPhoneNumberScreen(
                             modifier = Modifier
                                 .width(horizontalCenterColumnWidth)
                                 .padding(top = 24.dp)
-                        ) { Text(text = "Do") }
+                        ) { Text(text = "Do") }*/
                     }
                 }
             }
