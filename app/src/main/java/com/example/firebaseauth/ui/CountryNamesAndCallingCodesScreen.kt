@@ -2,10 +2,7 @@ package com.example.firebaseauth.ui
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -108,22 +106,13 @@ fun TopBar(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        /*Image(
+        Image(
             painter = painterResource(R.drawable.ic_baseline_keyboard_backspace_24),
             contentDescription = null,
             modifier = Modifier
                 .clickable(onClick = { onNavigateBack() })
                 .padding(3.dp)
-        )*/
-        Box(
-            modifier = Modifier
-                /*.width(24.dp)
-                .height(24.dp)*/
-                .clickable(onClick = { onNavigateBack() })
-                .padding(3.dp), contentAlignment = Alignment.CenterStart
-        ) {
-            Text(text = "Back ⮨")
-        }
+        )
 
         SearchBox(
             keywordProvider = { keywordProvider() },
@@ -144,7 +133,8 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
             searchBoxHasFocus = focusState.hasFocus
         },
         textStyle = TextStyle(color = MaterialTheme.colors.onBackground),
-        singleLine = true
+        singleLine = true,
+        cursorBrush = SolidColor(if (isSystemInDarkTheme()) Color.White else Color.Black)
     ) { innerTextField ->
         var searchBoxWidthWithFocus by remember {
             mutableStateOf(0.dp)
