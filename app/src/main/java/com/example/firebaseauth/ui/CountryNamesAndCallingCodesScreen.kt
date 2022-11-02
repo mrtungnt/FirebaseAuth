@@ -1,6 +1,7 @@
 package com.example.firebaseauth.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -20,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -105,13 +108,23 @@ fun TopBar(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Image(
+        /*Image(
             painter = painterResource(R.drawable.ic_baseline_keyboard_backspace_24),
             contentDescription = null,
             modifier = Modifier
                 .clickable(onClick = { onNavigateBack() })
                 .padding(3.dp)
-        )
+        )*/
+        Box(
+            modifier = Modifier
+                /*.width(24.dp)
+                .height(24.dp)*/
+                .clickable(onClick = { onNavigateBack() })
+                .padding(3.dp), contentAlignment = Alignment.CenterStart
+        ) {
+            Text(text = "Back ⮨")
+        }
+
         SearchBox(
             keywordProvider = { keywordProvider() },
             onKeywordChange = { onKeywordChange(it) })
@@ -130,6 +143,7 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
         modifier = Modifier.onFocusChanged { focusState ->
             searchBoxHasFocus = focusState.hasFocus
         },
+        textStyle = TextStyle(color = MaterialTheme.colors.onBackground),
         singleLine = true
     ) { innerTextField ->
         var searchBoxWidthWithFocus by remember {
@@ -140,14 +154,22 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
             mutableStateOf(0.dp)
         }
 
-        val searchBoxWidthAnim by animateDpAsState(targetValue = if (searchBoxHasFocus) searchBoxWidthWithFocus else searchBoxWidthWithoutFocus)
+        val searchBoxWidthAnim by animateDpAsState(
+            targetValue = if (searchBoxHasFocus) searchBoxWidthWithFocus else searchBoxWidthWithoutFocus,
+            animationSpec = /*tween(
+                durationMillis = 300,
+                delayMillis = 50,
+                easing = LinearOutSlowInEasing
+            ),*/
+            spring(dampingRatio = 1.8f)
+        )
         val density = LocalDensity.current
 
         @Composable
-        fun InnerSearchBox() {
+        fun InputAndPlaceHolder() {
             Box(
                 modifier = Modifier
-                    .padding(start = 5.dp, end = if (keywordProvider().isEmpty()) 10.dp else 29.dp),
+                    .padding(start = 5.dp, end = if (keywordProvider().isEmpty()) 10.dp else 31.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Box(modifier = Modifier.padding(start = 5.dp)) {
@@ -185,15 +207,15 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
                     }
             )
         else {
-            Box(modifier = Modifier
-                .layout { measurable, constraints ->
-                    val placeable = measurable.measure(constraints)
-                    if (searchBoxWidthWithoutFocus == 0.dp)
+            if (searchBoxWidthWithFocus == 0.dp)
+                Box(modifier = Modifier
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
                         searchBoxWidthWithoutFocus = with(density) { placeable.width.toDp() }
-                    layout(placeable.width, placeable.height) {}
-                }) {
-                InnerSearchBox()
-            }
+                        layout(placeable.width, placeable.height) {}
+                    }) {
+                    InputAndPlaceHolder()
+                }
         }
 
         Box(
@@ -208,7 +230,7 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
                 },
             contentAlignment = Alignment.CenterStart
         ) {
-            InnerSearchBox()
+            InputAndPlaceHolder()
 
             if (keywordProvider().isNotEmpty())
                 Image(
@@ -231,6 +253,7 @@ fun CountryNamesAndCallingCodesRow(
 ) {
     Row(
         modifier = Modifier
+            .fillMaxWidth()
             .height(IntrinsicSize.Max)
             .clickable { onClickItem(country) }
             .background(Color(if (colorAlternatorProvider() == 0) 0xFFEEFEF1 else 0xFFEAF8ED)),
@@ -239,57 +262,68 @@ fun CountryNamesAndCallingCodesRow(
         Text(
             text = country.name, modifier = Modifier
                 .fillMaxWidth(.8f)
-                .padding(start = 5.dp)
+                .padding(start = 5.dp), color = Color.Black
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(.4f)
-                .fillMaxHeight()
-                .background(Color(if (colorAlternatorProvider() == 0) 0xFFEAFFEE else 0xFFEBFEEF)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = country.alpha2Code, textAlign = TextAlign.Center
-            )
+        Box(modifier = Modifier.fillMaxWidth())
+        {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(.4f)
+                    .fillMaxHeight()
+                    .background(Color(if (colorAlternatorProvider() == 0) 0xFFEAFFEE else 0xFFEBFEEF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = country.alpha2Code, textAlign = TextAlign.Center, color = Color.Black
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = if (country.callingCodes.isNotEmpty()) country.callingCodes[0] else "",
+                    modifier = Modifier
+                        .padding(end = 5.dp),
+                    textAlign = TextAlign.Right, color = Color.Black
+                )
+            }
         }
-
-        Text(
-            text = if (country.callingCodes.isNotEmpty()) country.callingCodes[0] else "",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 5.dp),
-            textAlign = TextAlign.Right
-        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun CountryNamesAndCallingCodesRowPreview() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-    ) {
-        CountryNamesAndCallingCodesRow(
-            CountryNamesAndCallingCodeModel(
-                name = "Vietnam",
-                alpha2Code = "VN",
-                callingCodes = listOf("84")
-            ),
-            { 1 % 2 }
-        ) {}
-        CountryNamesAndCallingCodesRow(
-            CountryNamesAndCallingCodeModel("El Salvador", "EL", listOf("1")),
-            { 2 % 2 }
-        ) {}
+    FirebaseAuthTheme(darkTheme = true) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            CountryNamesAndCallingCodesRow(
+                CountryNamesAndCallingCodeModel(
+                    name = "South Georgia and the South Sandwich Islands",
+                    alpha2Code = "...",
+                    callingCodes = listOf("84")
+                ),
+                { 1 % 2 }
+            ) {}
+            CountryNamesAndCallingCodesRow(
+                CountryNamesAndCallingCodeModel("El Salvador", "EL", listOf("1")),
+                { 2 % 2 }
+            ) {}
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun TopBarPreview() {
-    FirebaseAuthTheme {
+    FirebaseAuthTheme(darkTheme = true) {
         TopBar(keywordProvider = { "" }, onKeywordChange = {}, onNavigateBack = {})
     }
 }

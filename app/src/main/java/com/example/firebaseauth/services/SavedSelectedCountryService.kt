@@ -44,9 +44,9 @@ class SavedSelectedCountryService @Inject constructor(context: Context) {
                     jsonString
                 )
             } catch (exc: Exception) {
-                /*if (exc is FileNotFoundException)
+                if (exc is FileNotFoundException)
                     null
-                else*/
+                else
                     throw exc
             }
         }

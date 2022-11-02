@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,10 +37,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
-import timber.log.Timber
 
 @RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -60,6 +55,10 @@ fun AuthActivity.HomeContent() {
             Surface(
                 modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
             ) {
+                var phoneNumber by rememberSaveable {
+                    mutableStateOf("")
+                }
+
                 NavHost(navController = navController, startDestination = "AuthHomeScreen") {
                     composable(route = "AuthHomeScreen") {
                         AuthHomeScreen(
@@ -70,6 +69,8 @@ fun AuthActivity.HomeContent() {
                                 )
                             },
                             targetActivity = activity,
+                            phoneNumberProvider = { phoneNumber },
+                            onPhoneNumberChange = { phoneNumber = it }
                         )
                     }
                     composable(route = "CountryNamesAndCallingCodesScreen") {
@@ -98,6 +99,8 @@ fun AuthHomeScreen(
     scaffoldState: ScaffoldState,
     onNavigateToCountryNamesAndCallingCodesScreen: () -> Unit,
     targetActivity: AuthActivity,
+    phoneNumberProvider: () -> String,
+    onPhoneNumberChange: (String) -> Unit,
 ) {
     val vm = remember {
         targetActivity.authViewModel
@@ -149,30 +152,28 @@ fun AuthHomeScreen(
 
             when {
                 authHomeUIState.verificationId.isEmpty() -> {
-                    var phoneNumber by rememberSaveable {
-                        mutableStateOf("")
-                    }
-
                     LoginWithPhoneNumberScreen(
                         selectedCountryProvider = { savedSelectedCountryState },
                         onNavigateToCountryNamesAndCallingCodesScreen = onNavigateToCountryNamesAndCallingCodesScreen,
-                        phoneNumberProvider = { phoneNumber },
+                        phoneNumberProvider = { phoneNumberProvider() },
                         onPhoneNumberChange = {
                             if (hasException(authRequestUIState.requestExceptionMessage)) vm.onRequestException(
                                 ""
                             )
-                            phoneNumber = if (it.isNotEmpty() && it.last().code != KEY_ENTER)
-                                it
-                            else ""
+                            onPhoneNumberChange(
+                                if (it.isNotEmpty() && it.last().code != KEY_ENTER)
+                                    it
+                                else ""
+                            )
                         },
                         onDone = {
-                            if (savedSelectedCountryState?.callingCodes?.isEmpty() == true)
+                            if (savedSelectedCountryState == null || savedSelectedCountryState?.callingCodes?.isEmpty() == true)
                                 vm.updateSnackbar(
-                                    "Chưa xác định được mã điện thoại quốc gia." +
+                                    "Chưa xác định được mã điện thoại quốc gia. " +
                                             "Hãy chọn quốc gia tương ứng với số điện thoại đăng ký cho ứng dụng."
                                 )
                             else phoneAuth.startPhoneNumberVerification(
-                                "+${savedSelectedCountryState?.callingCodes?.get(0)}${phoneNumber.trimStart { it == '0' }}",
+                                "+${savedSelectedCountryState?.callingCodes?.get(0)}${phoneNumberProvider().trimStart { it == '0' }}",
                                 authHomeUIState.resendingToken
                             )
                             kbController?.hide()
@@ -377,8 +378,8 @@ fun LoginWithPhoneNumberScreen(
                                             .width(3.dp)
                                             .padding(start = 2.dp, top = 1.dp, bottom = 1.dp)
                                             .background(
-                                                color = MaterialTheme.colors.primaryVariant.copy(
-                                                    alpha = .3f
+                                                color = MaterialTheme.colors.primary.copy(
+                                                    alpha = .5f
                                                 )
                                             )
                                     )
@@ -404,7 +405,6 @@ fun LoginWithPhoneNumberScreen(
                 if (hasException(exceptionMessage)) {
                     ExceptionShowBox(exceptionMessage = exceptionMessage)
                 } else if (!requestInProgress) {
-                    val countryJson = stringArrayResource(id = R.array.countries)
                     Column {
                         Button(
                             onClick = {
@@ -479,7 +479,6 @@ fun LoginWithPhoneNumberScreen(
                                     placeable.placeRelative(0, yOfProgressionSurface)
                                 }
                             }
-                            .fillMaxWidth()
                             .padding(10.dp)
                             .padding(top = 8.dp, bottom = 8.dp),
                         elevation = 2.dp,
@@ -544,7 +543,7 @@ fun VerifyCodeScreen(
     val verificationInProgress = verificationInProgressProvider()
     var yProgressionSurface = 0
 
-    Box {
+    Box(contentAlignment = Alignment.TopCenter, modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = modifier
                 .layout { measurable, constraints ->
@@ -554,8 +553,7 @@ fun VerifyCodeScreen(
                         placeable.placeRelative(0, 0)
                     }
                 }
-                .width(IntrinsicSize.Max)
-                .align(Alignment.TopCenter),
+                .width(IntrinsicSize.Max),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -587,7 +585,6 @@ fun VerifyCodeScreen(
             Spacer(
                 modifier = Modifier.height(5.dp)
             )
-
 
             if (hasException(exceptionMessage)) {
                 ExceptionShowBox(exceptionMessage = exceptionMessage)
@@ -653,7 +650,7 @@ fun VerifyCodeScreen(
 @Preview(showBackground = true)
 @Composable
 fun LoginWithPasswordScreenPreview() {
-    FirebaseAuthTheme {
+    FirebaseAuthTheme(darkTheme = true) {
         LoginWithPhoneNumberScreen(
             selectedCountryProvider = { null },
             onNavigateToCountryNamesAndCallingCodesScreen = {},
