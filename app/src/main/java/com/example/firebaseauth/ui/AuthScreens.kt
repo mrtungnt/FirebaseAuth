@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -35,8 +36,9 @@ import com.example.firebaseauth.services.CountryNamesAndCallingCodeModel
 import com.example.firebaseauth.ui.theme.FirebaseAuthTheme
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -154,7 +156,7 @@ fun AuthHomeScreen(
                 authHomeUIState.verificationId.isEmpty() -> {
                     LoginWithPhoneNumberScreen(
                         selectedCountryProvider = { savedSelectedCountryState },
-                        onNavigateToCountryNamesAndCallingCodesScreen = onNavigateToCountryNamesAndCallingCodesScreen,
+                        onNavigateToCountryNamesAndCallingCodesScreen = { onNavigateToCountryNamesAndCallingCodesScreen() },
                         phoneNumberProvider = { phoneNumberProvider() },
                         onPhoneNumberChange = {
                             if (hasException(authRequestUIState.requestExceptionMessage)) vm.onRequestException(
@@ -167,15 +169,19 @@ fun AuthHomeScreen(
                             )
                         },
                         onDone = {
-                            if (savedSelectedCountryState == null || savedSelectedCountryState?.callingCodes?.isEmpty() == true)
+                            if (savedSelectedCountryState == null || savedSelectedCountryState.callingCodes.isEmpty())
                                 vm.updateSnackbar(
                                     "Chưa xác định được mã điện thoại quốc gia. " +
                                             "Hãy chọn quốc gia tương ứng với số điện thoại đăng ký cho ứng dụng."
                                 )
-                            else phoneAuth.startPhoneNumberVerification(
-                                "+${savedSelectedCountryState?.callingCodes?.get(0)}${phoneNumberProvider().trimStart { it == '0' }}",
-                                authHomeUIState.resendingToken
-                            )
+                            else {
+                                phoneAuth.startPhoneNumberVerification(
+                                    "+${savedSelectedCountryState.callingCodes[0]}${phoneNumberProvider().trimStart { it == '0' }}",
+                                    authHomeUIState.resendingToken
+                                )
+                                vm.dismissSnackbar();vm.cancelPendingActiveListener()
+                            }
+                            targetActivity.authViewModel.onRequestInProgress(true)
                             kbController?.hide()
                         },
                         requestInProgressProvider = { authRequestUIState.requestInProgress },
@@ -183,8 +189,9 @@ fun AuthHomeScreen(
                         handleLocationPermissionRequest = targetActivity::handleLocationPermissionRequest,
                         isRequestTimeoutProvider = { authRequestUIState.isRequestTimeout },
                         onRequestTimeout = vm::onRequestTimeout,
-                        onRetry = { vm.dismissSnackbar(); vm.cancelPendingActiveListener();vm.logUserOut() },
-                        snackbarHostState = scaffoldState.snackbarHostState
+                        onRetry = { vm.cancelPendingActiveListener(); vm.logUserOut() },
+                        snackbarHostState = scaffoldState.snackbarHostState,
+                        onDispose = { vm.dismissSnackbar();vm.cancelPendingActiveListener() }
                     )
                 }
 
@@ -193,10 +200,10 @@ fun AuthHomeScreen(
                         mutableStateOf("")
                     }
 
-                    remember {
-                        vm.dismissSnackbar()
-                        vm.cancelPendingActiveListener()
-                    }
+                    /* remember {
+                         vm.dismissSnackbar()
+                         vm.cancelPendingActiveListener()
+                     }*/
 
                     VerifyCodeScreen(
                         codeToVerifyProvider = { codeToVerify },
@@ -291,8 +298,13 @@ fun LoginWithPhoneNumberScreen(
     isRequestTimeoutProvider: () -> Boolean,
     onRequestTimeout: () -> Unit,
     onRetry: () -> Unit,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    onDispose: () -> Unit,
 ) {
+    DisposableEffect(key1 = Unit) {
+        onDispose { onDispose() }
+    }
+
     Surface(
         color = MaterialTheme.colors.background, modifier = Modifier.fillMaxWidth()
     ) {
@@ -364,12 +376,13 @@ fun LoginWithPhoneNumberScreen(
                                         text = selectedCountry?.alpha2Code ?: "Chọn quốc gia",
                                         modifier = Modifier
                                             .padding(start = 10.dp),
-                                        color = MaterialTheme.colors.secondaryVariant
+                                        color = Color(0xFF279500)
                                     )
 
                                     Image(
                                         painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
                                         contentDescription = null,
+                                        colorFilter = ColorFilter.tint(Color(0xFF62A9EB))
                                     )
 
                                     Spacer(
@@ -461,10 +474,6 @@ fun LoginWithPhoneNumberScreen(
                     LaunchedEffect(key1 = phoneNumber) {
                         delay(TIME_THRESHOLD_FOR_RESPONSE)
                         onRequestTimeout()
-                        showNoticeAndRecommendation(
-                            snackbarHostState,
-                            onRetry
-                        )
                     }
 
                 Surface(
@@ -506,12 +515,13 @@ fun LoginWithPhoneNumberScreen(
     }
 }
 
-const val TIME_THRESHOLD_FOR_RESPONSE = 30000L
+const val TIME_THRESHOLD_FOR_RESPONSE = 15000L
 
 suspend fun showNoticeAndRecommendation(
     snackbarHostState: SnackbarHostState,
     doAsRecommended: () -> Unit
-) = coroutineScope {
+) = withContext(Dispatchers.Default) {
+    snackbarHostState.currentSnackbarData?.dismiss()
     val result = snackbarHostState.showSnackbar(
         "Thời gian phản hồi lâu hơn dự kiến.",
         "Đăng nhập khác",
@@ -602,10 +612,6 @@ fun VerifyCodeScreen(
             } else LaunchedEffect(key1 = codeToVerify) {
                 delay(TIME_THRESHOLD_FOR_RESPONSE)
                 onVerificationTimeout()
-                showNoticeAndRecommendation(
-                    snackbarHostState,
-                    onRetry
-                )
             }
 
             Surface(
@@ -664,6 +670,7 @@ fun LoginWithPasswordScreenPreview() {
             onRequestTimeout = {},
             onRetry = {},
             snackbarHostState = SnackbarHostState(),
+            onDispose = {},
         )
     }
 }

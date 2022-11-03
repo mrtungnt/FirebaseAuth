@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Address
@@ -27,7 +26,6 @@ import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.firebaseauth.ui.HomeContent
-import com.example.firebaseauth.ui.NoConnectionScreen
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
@@ -87,7 +85,7 @@ class AuthActivity : ComponentActivity() {
             shouldShowRequestPermissionRationale(
                 this, Manifest.permission.ACCESS_COARSE_LOCATION
             ) -> {
-authViewModel.updateSnackbar(
+                authViewModel.updateSnackbar(
                     "Hãy cho phép dùng Định vị (Location) để sử dụng tính năng này.",
                     duration = SnackbarDuration.Short
                 )
@@ -131,9 +129,11 @@ authViewModel.updateSnackbar(
         authViewModel.locationTask?.addOnSuccessListener {
             if (it != null) {
                 lifecycleScope.launch {
-                    val address = getFromLocation(it)
-                    if (address?.isNotEmpty() == true) {
-//                        authViewModel.setSelectedCountry(address.first().countryName)
+                    val addresses = getFromLocation(it)
+                    if (addresses?.isNotEmpty() == true) {
+                        val countryCode = addresses.first().countryCode
+                        Timber.d("selected country: $countryCode")
+                        authViewModel.setSelectedCountry(countryCode)
                         authViewModel.updateSnackbar("Đã xác định quốc gia từ vị trí.")
                     }
                 }
@@ -169,9 +169,9 @@ authViewModel.updateSnackbar(
 //                        Preconditions.checkNotNull(pendingIntent)
                         intentSenderForEnablingLocation.launch(
                             IntentSenderRequest.Builder(pendingIntent.intentSender)
-.setFillInIntent(null)
-                                .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION, 0)
-.build()
+                                .setFillInIntent(null)
+//                                .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION, 0)
+                                .build()
                         )
                     }
                 } catch (sendEx: IntentSender.SendIntentException) {
@@ -232,8 +232,9 @@ authViewModel.updateSnackbar(
 //        FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setContent {
-            if (isConnected) HomeContent()
-            else NoConnectionScreen()
+            HomeContent()
+            /*if (isConnected) HomeContent()
+            else NoConnectionScreen()*/
         }
     }
 }

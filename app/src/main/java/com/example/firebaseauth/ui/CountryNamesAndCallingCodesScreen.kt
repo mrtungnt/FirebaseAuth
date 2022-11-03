@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -111,7 +112,8 @@ fun TopBar(
             contentDescription = null,
             modifier = Modifier
                 .clickable(onClick = { onNavigateBack() })
-                .padding(3.dp)
+                .padding(3.dp),
+            colorFilter = ColorFilter.tint(Color(0xFF55AA00))
         )
 
         SearchBox(
@@ -134,7 +136,7 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
         },
         textStyle = TextStyle(color = MaterialTheme.colors.onBackground),
         singleLine = true,
-        cursorBrush = SolidColor(if (isSystemInDarkTheme()) Color.White else Color.Black)
+        cursorBrush = SolidColor(MaterialTheme.colors.onBackground)
     ) { innerTextField ->
         var searchBoxWidthWithFocus by remember {
             mutableStateOf(0.dp)

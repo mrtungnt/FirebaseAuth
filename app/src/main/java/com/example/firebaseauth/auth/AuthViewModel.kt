@@ -160,12 +160,12 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun setSelectedCountry(countryName: String) {
+    fun setSelectedCountry(countryCode: String) {
         viewModelScope.launch {
             try {
                 savedSelectedCountryState =
-                    _countriesAndCallingCodes.first { it.name == countryName }
-                saveSelectedCountry(_countriesAndCallingCodes.first { it.name == countryName })
+                    _countriesAndCallingCodes.first { it.name == countryCode }
+                saveSelectedCountry(_countriesAndCallingCodes.first { it.name == countryCode })
             } catch (exc: NoSuchElementException) {
                 Timber.e("${exc.message}")
                 updateSnackbar("Không khớp được tên quốc gia")
