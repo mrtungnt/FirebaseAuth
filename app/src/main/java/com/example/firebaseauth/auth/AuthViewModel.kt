@@ -164,11 +164,11 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 savedSelectedCountryState =
-                    _countriesAndCallingCodes.first { it.name == countryCode }
-                saveSelectedCountry(_countriesAndCallingCodes.first { it.name == countryCode })
+                    _countriesAndCallingCodes.first { it.alpha2Code == countryCode }
+                saveSelectedCountry(_countriesAndCallingCodes.first { it.alpha2Code == countryCode })
             } catch (exc: NoSuchElementException) {
                 Timber.e("${exc.message}")
-                updateSnackbar("Không khớp được tên quốc gia")
+                updateSnackbar("Không khớp được mã quốc gia")
             }
         }
     }

@@ -2,7 +2,10 @@ package com.example.firebaseauth.ui
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -65,7 +68,7 @@ fun CountryNamesAndCallingCodesScreen(
                             }
                         ) {
                             onSelectCountry(
-                                it.name
+                                it.alpha2Code
                             )
                             onNavigateToAuthHomeScreen()
                         }
@@ -86,7 +89,7 @@ fun CountryNamesAndCallingCodesScreen(
                         }
                     ) {
                         onSelectCountry(
-                            it.name
+                            it.alpha2Code
                         )
                         onNavigateToAuthHomeScreen()
                     }
@@ -142,18 +145,9 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
             mutableStateOf(0.dp)
         }
 
-        var searchBoxWidthWithoutFocus by remember {
-            mutableStateOf(0.dp)
-        }
-
         val searchBoxWidthAnim by animateDpAsState(
-            targetValue = if (searchBoxHasFocus) searchBoxWidthWithFocus else searchBoxWidthWithoutFocus,
-            animationSpec = /*tween(
-                durationMillis = 300,
-                delayMillis = 50,
-                easing = LinearOutSlowInEasing
-            ),*/
-            spring(dampingRatio = 1.8f)
+            targetValue = searchBoxWidthWithFocus ,
+            animationSpec = spring(dampingRatio = 1.8f)
         )
         val density = LocalDensity.current
 
@@ -198,17 +192,6 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
                         layout(placeable.width, placeable.height) {}
                     }
             )
-        else {
-            if (searchBoxWidthWithFocus == 0.dp)
-                Box(modifier = Modifier
-                    .layout { measurable, constraints ->
-                        val placeable = measurable.measure(constraints)
-                        searchBoxWidthWithoutFocus = with(density) { placeable.width.toDp() }
-                        layout(placeable.width, placeable.height) {}
-                    }) {
-                    InputAndPlaceHolder()
-                }
-        }
 
         Box(
             modifier = Modifier
