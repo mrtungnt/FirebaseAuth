@@ -411,12 +411,9 @@ fun LoginWithPhoneNumberScreen(
 
                 val density = LocalDensity.current
 
-                var bottomPaddingOfDivider by rememberSaveable {
-                    mutableStateOf(with(density) { 18.dp.roundToPx() })
-                }
 
-                var heightOfDivider by rememberSaveable {
-                    mutableStateOf(with(density) { 37.dp.roundToPx() })
+                var heightOfAutoButton by rememberSaveable {
+                    mutableStateOf(with(density) { 36.dp.roundToPx() })
                 }
 
                 Button(
@@ -425,10 +422,7 @@ fun LoginWithPhoneNumberScreen(
                         .width(horizontalCenterColumnWidth)
                         .layout { measurable, constraints ->
                             val placeable = measurable.measure(constraints)
-                            if (with(density) { (placeable.height).toDp() - 12.dp } > 36.dp) {
-                                bottomPaddingOfDivider = with(density) { 12.dp.roundToPx() }
-                                heightOfDivider = with(density) { 31.dp.roundToPx() }
-                            }
+                            heightOfAutoButton = placeable.height
                             layout(placeable.width, placeable.height) {
                                 placeable.placeRelative(0, 0)
                             }
@@ -444,13 +438,16 @@ fun LoginWithPhoneNumberScreen(
                 } else if (!requestInProgress) {
                     Column {
                         Divider(
-                            Modifier
-                                .height(with(density) { heightOfDivider.toDp() })
-                                .padding(
-                                    top = 18.dp,
-                                    bottom = with(density) { bottomPaddingOfDivider.toDp() }
-                                ) // The button has intrinsic paddings of 6.dp
-                        )
+                            modifier =
+                            if (with(density) { heightOfAutoButton.toDp() - 12.dp > 36.dp })
+                                Modifier
+                                    .height(31.dp)
+                                    .padding(top = 18.dp, bottom = 12.dp)
+                            else
+                                Modifier
+                                    .height(37.dp)
+                                    .padding(top = 18.dp, bottom = 18.dp)
+                        ) // The button has intrinsic paddings of 6.dp
 
                         Button(
                             onClick = {

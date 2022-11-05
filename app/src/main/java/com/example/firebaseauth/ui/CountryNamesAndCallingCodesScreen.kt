@@ -1,6 +1,7 @@
 package com.example.firebaseauth.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,16 +18,21 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+//import androidx.compose.ui.layout.Placeable.PlacementScope.Companion.placeRelative
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.paging.Pager
@@ -141,16 +147,6 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
         singleLine = true,
         cursorBrush = SolidColor(MaterialTheme.colors.onBackground)
     ) { innerTextField ->
-        var searchBoxWidthWithFocus by remember {
-            mutableStateOf(0.dp)
-        }
-
-        val searchBoxWidthAnim by animateDpAsState(
-            targetValue = searchBoxWidthWithFocus ,
-            animationSpec = spring(dampingRatio = 1.8f)
-        )
-        val density = LocalDensity.current
-
         @Composable
         fun InputAndPlaceHolder() {
             Box(
@@ -182,40 +178,78 @@ fun SearchBox(keywordProvider: () -> String, onKeywordChange: (String) -> Unit) 
             }
         }
 
-        if (searchBoxHasFocus)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(.85f)
-                    .layout { measurable, constraints ->
-                        val placeable = measurable.measure(constraints)
-                        searchBoxWidthWithFocus = with(density) { placeable.width.toDp() }
-                        layout(placeable.width, placeable.height) {}
-                    }
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth(.85f),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            val density = LocalDensity.current
+
+            var searchBoxWidthWithFocus by rememberSaveable {
+                mutableStateOf(0)
+            }
+
+            if (searchBoxHasFocus)
+                searchBoxWidthWithFocus = with(density) { maxWidth.roundToPx() }
+
+            val searchBoxWidthAnim by animateIntAsState(
+                targetValue = searchBoxWidthWithFocus,
+                animationSpec = spring(dampingRatio = 1.8f)
             )
 
-        Box(
-            modifier = Modifier
-                .height(35.dp)
-                .padding(5.dp)
-                .border(width = 1.dp, Color.LightGray, shape = RoundedCornerShape(12.dp)).let {
-                    if (searchBoxHasFocus)
-                        it.width(searchBoxWidthAnim)
-                    else
-                        it
-                },
-            contentAlignment = Alignment.CenterStart
-        ) {
-            InputAndPlaceHolder()
+            Box(
+                modifier = Modifier
+                    .height(35.dp)
+                    .padding(5.dp)
+                    .border(width = 1.dp, Color.LightGray, shape = RoundedCornerShape(12.dp))
+                    .let {
+                        if (searchBoxHasFocus)
+                            it
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(
+                                        Constraints(
+                                            constraints.minWidth,
+                                            searchBoxWidthAnim,
+                                            constraints.minHeight,
+                                            constraints.maxHeight
+                                        )
+                                    )
+                                    layout(searchBoxWidthAnim, placeable.height) {
+                                        placeable.placeRelative(0, 0)
+                                    }
+                                }
+//                                .fillMaxWidth()
+                                .drawBehind {
+                                    drawLine(
+                                        color = Color.Magenta,
+                                        start = Offset(0f, 10f),
+                                        end = Offset(
+                                            searchBoxWidthAnim.toFloat(), 10f
+                                        )
+                                    )
+                                }
+                        else
+                            it
+                    },
+                contentAlignment = Alignment.CenterStart
+            ) {
+                InputAndPlaceHolder()
+            }
 
+            val showClearSign by remember {
+                derivedStateOf { keywordProvider().isNotEmpty() }
+            }
+
+//            if (showClearSign)
             if (keywordProvider().isNotEmpty())
-                Image(
-                    painter = painterResource(id = R.drawable.ic_baseline_clear_24),
-                    contentDescription = "clear keyword",
-                    modifier = Modifier
-                        .padding(end = 5.dp)
-                        .align(Alignment.CenterEnd)
-                        .clickable { onKeywordChange("") }
-                )
+                Box(modifier = Modifier.padding(end = 5.dp)) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_baseline_clear_24),
+                        contentDescription = "clear keyword",
+                        modifier = Modifier
+                            .clickable { onKeywordChange("") }
+                    )
+                    Text("clear")
+                }
         }
     }
 }
