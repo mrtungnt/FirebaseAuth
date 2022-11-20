@@ -412,8 +412,12 @@ fun LoginWithPhoneNumberScreen(
                 val density = LocalDensity.current
 
 
-                var heightOfAutoButton by rememberSaveable {
-                    mutableStateOf(with(density) { 36.dp.roundToPx() })
+                var heightOfAutoButton = rememberSaveable {
+                    (with(density) { 0.dp.roundToPx() })
+                }
+
+                var buttonsHaveDifferentHeight by rememberSaveable {
+                    mutableStateOf(false)
                 }
 
                 Button(
@@ -437,17 +441,22 @@ fun LoginWithPhoneNumberScreen(
                     ExceptionShowBox(exceptionMessage = exceptionMessage)
                 } else if (!requestInProgress) {
                     Column {
-                        Divider(
-                            modifier =
-                            if (with(density) { heightOfAutoButton.toDp() - 12.dp > 36.dp })
-                                Modifier
-                                    .height(31.dp)
-                                    .padding(top = 18.dp, bottom = 12.dp)
-                            else
-                                Modifier
-                                    .height(37.dp)
-                                    .padding(top = 18.dp, bottom = 18.dp)
-                        ) // The button has intrinsic paddings of 6.dp
+                        Box(
+                            modifier = Modifier.layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                val height =
+                                    // with or without intrinsic paddings of 6.dp
+                                    with(density) { if (buttonsHaveDifferentHeight) 31.dp.roundToPx() else 37.dp.roundToPx() }
+                                layout(placeable.width, height) {
+                                    placeable.placeRelative(0, 0)
+                                }
+                            }
+                        )
+                        {
+                            Divider(
+                                modifier = Modifier.padding(top = 18.dp)
+                            )
+                        }
 
                         Button(
                             onClick = {
@@ -456,6 +465,14 @@ fun LoginWithPhoneNumberScreen(
                             },
                             modifier = Modifier
                                 .width(horizontalCenterColumnWidth)
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    if (heightOfAutoButton != placeable.height)
+                                        buttonsHaveDifferentHeight = true
+                                    layout(placeable.width, placeable.height) {
+                                        placeable.placeRelative(0, 0)
+                                    }
+                                }
                         ) { Text(text = "Tiếp tục") }
 
                         /*val scope = rememberCoroutineScope()
@@ -677,7 +694,7 @@ fun VerifyCodeScreen(
     }
 }
 
-@Preview(showBackground = true)
+@Preview()
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme(darkTheme = true) {
