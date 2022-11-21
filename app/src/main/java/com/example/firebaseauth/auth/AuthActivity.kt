@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Address
@@ -75,6 +74,7 @@ class AuthActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.N)
     fun handleLocationPermissionRequest() {
+        Timber.d("request for location permission")
         val permissionCheck = ContextCompat.checkSelfPermission(
             applicationContext, Manifest.permission.ACCESS_COARSE_LOCATION
         )
@@ -109,7 +109,7 @@ class AuthActivity : ComponentActivity() {
         return withContext(context = lifecycleScope.coroutineContext + Dispatchers.IO) {
             try {
                 Geocoder(applicationContext).getFromLocation(
-                    location.latitude, location.longitude, 1
+                    location.latitude, location.longitude, 1,
                 )
             } catch (exc: java.lang.Exception) {
                 Timber.e("${exc.message}")

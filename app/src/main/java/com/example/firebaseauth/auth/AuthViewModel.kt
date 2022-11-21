@@ -44,8 +44,6 @@ class AuthViewModel @Inject constructor(
         emptyList()
     )
 
-    val countriesAndCallingCodes get() = _countriesAndCallingCodes
-
     var savedSelectedCountryState: CountryNamesAndCallingCodeModel? by mutableStateOf(null)
 
     val countryNamesAndCallingCodesPager = Pager<Int, CountryNamesAndCallingCodeModel>(
@@ -242,6 +240,7 @@ class AuthViewModel @Inject constructor(
             delay(450)
             countryNamesAndCallingCodesSearchResult =
                 countryNamesAndCallingCodesRepository.searchCountryNamesAndCallingCodes(keyword)
+
         }
     }
 

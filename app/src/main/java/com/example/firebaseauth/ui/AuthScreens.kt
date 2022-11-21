@@ -143,7 +143,7 @@ fun AuthHomeScreen(
             Column {
                 val user = Firebase.auth.currentUser
                 Text(text = "Welcome ${user?.displayName ?: user?.phoneNumber}")
-                Button(onClick = vm::logUserOut) {
+                Button(onClick = { onPhoneNumberChange(""); vm.logUserOut() }) {
                     Text(text = "Sign out")
                 }
             }
@@ -174,17 +174,13 @@ fun AuthHomeScreen(
                                     "Chưa xác định được mã điện thoại quốc gia. " +
                                             "Hãy chọn quốc gia tương ứng với số điện thoại đăng ký cho ứng dụng."
                                 )
-                            /*else {
+                            else {
                                 phoneAuth.startPhoneNumberVerification(
                                     "+${savedSelectedCountryState.callingCodes[0]}${phoneNumberProvider().trimStart { it == '0' }}",
                                     authHomeUIState.resendingToken
                                 )
-//                                vm.dismissSnackbar();vm.cancelPendingActiveListener()
-                            }*/
-                            else
-                                vm.onRequestInProgress(true)
+                            }
 
-                            targetActivity.authViewModel.onRequestInProgress(true)
                             kbController?.hide()
                         },
                         requestInProgressProvider = { authRequestUIState.requestInProgress },
@@ -202,11 +198,6 @@ fun AuthHomeScreen(
                     var codeToVerify by rememberSaveable {
                         mutableStateOf("")
                     }
-
-                    /* remember {
-                         vm.dismissSnackbar()
-                         vm.cancelPendingActiveListener()
-                     }*/
 
                     VerifyCodeScreen(
                         codeToVerifyProvider = { codeToVerify },
@@ -338,7 +329,7 @@ fun LoginWithPhoneNumberScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .width(horizontalCenterColumnWidth)
+//                    .width(horizontalCenterColumnWidth)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -411,7 +402,6 @@ fun LoginWithPhoneNumberScreen(
 
                 val density = LocalDensity.current
 
-
                 var heightOfAutoButton = rememberSaveable {
                     (with(density) { 0.dp.roundToPx() })
                 }
@@ -440,7 +430,7 @@ fun LoginWithPhoneNumberScreen(
                 if (hasException(exceptionMessage)) {
                     ExceptionShowBox(exceptionMessage = exceptionMessage)
                 } else if (!requestInProgress) {
-                    Column {
+                    Column(Modifier.width(horizontalCenterColumnWidth)) {
                         Box(
                             modifier = Modifier.layout { measurable, constraints ->
                                 val placeable = measurable.measure(constraints)
@@ -562,7 +552,7 @@ fun LoginWithPhoneNumberScreen(
     }
 }
 
-const val TIME_THRESHOLD_FOR_RESPONSE = 2000L
+const val TIME_THRESHOLD_FOR_RESPONSE = 15000L
 
 suspend fun showNoticeAndRecommendation(
     snackbarHostState: SnackbarHostState,
@@ -694,7 +684,7 @@ fun VerifyCodeScreen(
     }
 }
 
-@Preview()
+@Preview
 @Composable
 fun LoginWithPasswordScreenPreview() {
     FirebaseAuthTheme(darkTheme = true) {
