@@ -20,6 +20,8 @@ android {
         versionCode 1
         versionName "1.0"
 
+        resConfigs "en", "vi"
+
         testInstrumentationRunner "com.example.firebaseauth.HiltTestRunner"
         vectorDrawables {
             useSupportLibrary true

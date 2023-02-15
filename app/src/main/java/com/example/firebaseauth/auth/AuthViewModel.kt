@@ -171,7 +171,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-
     fun setShouldShowLandingScreen(decision: Boolean) {
         val authHomeUIState =
             authUIStateFlow.value.authHomeUIState.copy(shouldShowLandingScreen = decision)

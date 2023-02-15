@@ -74,7 +74,6 @@ class AuthActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.N)
     fun handleLocationPermissionRequest() {
-        Timber.d("request for location permission")
         val permissionCheck = ContextCompat.checkSelfPermission(
             applicationContext, Manifest.permission.ACCESS_COARSE_LOCATION
         )

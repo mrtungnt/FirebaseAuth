@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="continue_button_title">Tiếp tục</string>
+    <string name="country_auto_determination_button_title">Tự động xác định quốc gia từ vị trí</string>
+    <string name="select_country">Chọn quốc gia</string>
+    <string name="phone_number">Số điện thoại</string>
+    <string name="verification_code_sent">Mã xác thực 6 số đã được gửi qua SMS.</string>
+    <string name="enter_verification_code">Nhập mã xác thực</string>
+    <string name="verifying">Đang xác thực</string>
+    <string name="waiting_for_verification_code">Chờ mã xác minh</string>
+</resources>

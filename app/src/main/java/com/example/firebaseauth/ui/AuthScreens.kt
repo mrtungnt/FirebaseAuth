@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,6 +41,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import timber.log.Timber
 
 @RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -192,6 +194,11 @@ fun AuthHomeScreen(
                         snackbarHostState = scaffoldState.snackbarHostState,
                         onDispose = { vm.dismissSnackbar();vm.cancelPendingActiveListener() }
                     )
+                    Timber.d(
+                        "targetActivity::handleLocationPermissionRequest.hashCode(): ${
+                            targetActivity::handleLocationPermissionRequest.hashCode().toString()
+                        }"
+                    )
                 }
 
                 else -> {
@@ -324,227 +331,191 @@ fun LoginWithPhoneNumberScreen(
 
         val horizontalCenterColumnWidth = 280.dp
         var yOfProgressionSurface = 0
-        Box {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-//                    .width(horizontalCenterColumnWidth)
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            yOfProgressionSurface = placeable.height
-                            layout(placeable.width, placeable.height) {
-                                placeable.placeRelative(0, 0)
-                            }
+                    /*.layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        yOfProgressionSurface = placeable.height
+                        layout(placeable.width, placeable.height) {
+                            placeable.placeRelative(0, 0)
                         }
-                        .padding(top = 30.dp)
-                ) {
-                    /*Image(
-                        painter = painterResource(id = R.drawable.logo),
-                        null,
-                        modifier = Modifier.padding(top = 50.dp)
-                    )*/
+                    }*/
+                    .padding(top = 30.dp)
+            ) {
+                /*Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    null,
+                    modifier = Modifier.padding(top = 50.dp)
+                )*/
 
-                    OutlinedTextField(
-                        value = phoneNumber,
-                        onValueChange = onPhoneNumberChange,
-                        modifier = Modifier.height(IntrinsicSize.Max),
-                        placeholder = {
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = onPhoneNumberChange,
+                    modifier = Modifier.height(IntrinsicSize.Max),
+                    placeholder = { Text(text = stringResource(id = R.string.phone_number)) },
+                    leadingIcon = {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .padding(end = 5.dp)
+                                .clickable(onClick = { onNavigateToCountryNamesAndCallingCodesScreen() }),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                text = "Số điện thoại"
+                                text = selectedCountry?.alpha2Code
+                                    ?: stringResource(id = R.string.select_country),
+                                modifier = Modifier
+                                    .padding(start = 10.dp),
+                                color = Color(0xFF279500)
                             )
-                        },
-                        leadingIcon = {
-                            Row(
+
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
+                                contentDescription = null,
+                                colorFilter = ColorFilter.tint(Color(0xFF62A9EB))
+                            )
+
+                            Spacer(
                                 modifier = Modifier
                                     .fillMaxHeight()
-                                    .padding(end = 5.dp)
-                                    .clickable(onClick = { onNavigateToCountryNamesAndCallingCodesScreen() }),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = selectedCountry?.alpha2Code ?: "Chọn quốc gia",
-                                    modifier = Modifier
-                                        .padding(start = 10.dp),
-                                    color = Color(0xFF279500)
-                                )
-
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_outline_arrow_drop_down_24),
-                                    contentDescription = null,
-                                    colorFilter = ColorFilter.tint(Color(0xFF62A9EB))
-                                )
-
-                                Spacer(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(3.dp)
-                                        .padding(start = 2.dp, top = 1.dp, bottom = 1.dp)
-                                        .background(
-                                            color = MaterialTheme.colors.primary.copy(
-                                                alpha = .5f
-                                            )
+                                    .width(3.dp)
+                                    .padding(start = 2.dp, top = 1.dp, bottom = 1.dp)
+                                    .background(
+                                        color = MaterialTheme.colors.primary.copy(
+                                            alpha = .5f
                                         )
-                                )
+                                    )
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    keyboardActions = KeyboardActions(onDone = { onDone() }),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
+                    ),
+                )
+            }
+
+            val density = LocalDensity.current
+
+            var heightOfAutoButton = rememberSaveable {
+                (with(density) { 0.dp.roundToPx() })
+            }
+
+            var buttonsHaveDifferentHeight by rememberSaveable {
+                mutableStateOf(false)
+            }
+
+            Timber.d(
+                "handleLocationPermissionRequest.hashCode(): ${
+                    handleLocationPermissionRequest.hashCode().toString()
+                }"
+            )
+            Button(
+                modifier = Modifier
+                    .padding(top = 18.dp)
+                    .width(horizontalCenterColumnWidth)
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    heightOfAutoButton = placeable.height
+                    layout(placeable.width, placeable.height) {
+                        placeable.placeRelative(0, 0)
+                    }
+                },
+                onClick = {
+                    handleLocationPermissionRequest()  /* not using function reference for the sake of avoiding recomposition */
+                }
+            ) { Text(text = stringResource(id = R.string.country_auto_determination_button_title)) }
+
+            if (hasException(exceptionMessage)) {
+                ExceptionShowBox(exceptionMessage = exceptionMessage)
+            } else if (!requestInProgress) {
+                Column(Modifier.width(horizontalCenterColumnWidth)) {
+                    Box(
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val height =
+                                // with or without intrinsic paddings of 6.dp
+                                with(density) { if (buttonsHaveDifferentHeight) 31.dp.roundToPx() else 37.dp.roundToPx() }
+                            layout(placeable.width, height) {
+                                placeable.placeRelative(0, 0)
                             }
-                        },
-                        singleLine = true,
-                        keyboardActions = KeyboardActions(onDone = { onDone() }),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done
-                        ),
+                        }
                     )
-                }
+                    {
+                        Divider(
+                            modifier = Modifier.padding(top = 18.dp)
+                        )
+                    }
 
-                val density = LocalDensity.current
-
-                var heightOfAutoButton = rememberSaveable {
-                    (with(density) { 0.dp.roundToPx() })
-                }
-
-                var buttonsHaveDifferentHeight by rememberSaveable {
-                    mutableStateOf(false)
-                }
-
-                Button(
-                    modifier = Modifier
-                        .padding(top = 18.dp)
-                        .width(horizontalCenterColumnWidth)
+                    Button(
+                        onClick = { onDone() /* indirect call to avoid recomposition */ },
+                        modifier = Modifier
+                            .width(horizontalCenterColumnWidth)
                         .layout { measurable, constraints ->
                             val placeable = measurable.measure(constraints)
-                            heightOfAutoButton = placeable.height
+                            if (heightOfAutoButton != placeable.height)
+                                buttonsHaveDifferentHeight = true
                             layout(placeable.width, placeable.height) {
                                 placeable.placeRelative(0, 0)
                             }
-                        },
-                    onClick = {
-                        handleLocationPermissionRequest()
-//                            not using function reference for the sake of avoiding recomposition
-                    }
-                ) { Text(text = "Tự động xác định quốc gia từ vị trí") }
-
-                if (hasException(exceptionMessage)) {
-                    ExceptionShowBox(exceptionMessage = exceptionMessage)
-                } else if (!requestInProgress) {
-                    Column(Modifier.width(horizontalCenterColumnWidth)) {
-                        Box(
-                            modifier = Modifier.layout { measurable, constraints ->
-                                val placeable = measurable.measure(constraints)
-                                val height =
-                                    // with or without intrinsic paddings of 6.dp
-                                    with(density) { if (buttonsHaveDifferentHeight) 31.dp.roundToPx() else 37.dp.roundToPx() }
-                                layout(placeable.width, height) {
-                                    placeable.placeRelative(0, 0)
-                                }
-                            }
-                        )
-                        {
-                            Divider(
-                                modifier = Modifier.padding(top = 18.dp)
-                            )
                         }
-
-                        Button(
-                            onClick = {
-                                onDone()
-//                                indirect call to avoid recomposition
-                            },
-                            modifier = Modifier
-                                .width(horizontalCenterColumnWidth)
-                                .layout { measurable, constraints ->
-                                    val placeable = measurable.measure(constraints)
-                                    if (heightOfAutoButton != placeable.height)
-                                        buttonsHaveDifferentHeight = true
-                                    layout(placeable.width, placeable.height) {
-                                        placeable.placeRelative(0, 0)
-                                    }
-                                }
-                        ) { Text(text = "Tiếp tục") }
-
-                        /*val scope = rememberCoroutineScope()
-                        Button(
-                            onClick = {
-                                // using coroutines here causing recomposition.
-                                scope.launch {
-                                    try {
-                                        val json = Json { ignoreUnknownKeys = true }
-
-                                        val country =
-                                            mutableListOf<List<CountryNamesAndCallingCodeModel>>()
-                                        countryJson.forEach {
-                                            country.add(
-                                                json.decodeFromString(
-                                                    it
-                                                )
-                                            )
-                                        }
-                                        var count = 0
-                                        country.forEach { c -> c.forEach { count++; Timber.d("$count: ${it.name}") } }
-                                    } catch (exc: Exception) {
-                                        Timber.e(exc.message)
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .width(horizontalCenterColumnWidth)
-                                .padding(top = 24.dp)
-                        ) { Text(text = "Do") }*/
-                    }
+                    ) { Text(text = stringResource(id = R.string.continue_button_title)) }
                 }
             }
+        }
 
-            if (requestInProgress) {
-                val isRequestTimeout = isRequestTimeoutProvider()
-                if (isRequestTimeout) {
-                    LaunchedEffect(key1 = phoneNumber) {
-                        onDispose()
-                        showNoticeAndRecommendation(
-                            snackbarHostState,
-                            onRetry
-                        )
-                    }
-                } else
-                    LaunchedEffect(key1 = phoneNumber) {
-                        delay(TIME_THRESHOLD_FOR_RESPONSE)
-                        onRequestTimeout()
-                    }
+        if (requestInProgress) {
+            val isRequestTimeout = isRequestTimeoutProvider()
+            if (isRequestTimeout) {
+                LaunchedEffect(key1 = phoneNumber) {
+                    onDispose()
+                    showNoticeAndRecommendation(
+                        snackbarHostState,
+                        onRetry
+                    )
+                }
+            } else
+                LaunchedEffect(key1 = phoneNumber) {
+                    delay(TIME_THRESHOLD_FOR_RESPONSE)
+                    onRequestTimeout()
+                }
 
+            Surface(
+                color = Color.Transparent.copy(0.37f),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Surface(
-                    color = Color.Transparent.copy(0.37f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .layout { measurable, constraints ->
-                                val placeable = measurable.measure(constraints)
-                                layout(constraints.maxWidth, constraints.maxHeight) {
-                                    placeable.placeRelative(0, yOfProgressionSurface)
-                                }
+                    modifier = Modifier
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            layout(constraints.maxWidth, constraints.maxHeight) {
+                                placeable.placeRelative(0, yOfProgressionSurface)
                             }
-                            .padding(10.dp)
-                            .padding(top = 8.dp, bottom = 8.dp),
-                        elevation = 2.dp,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Column(
-                            Modifier
-                                .padding(10.dp)
-                                .width(IntrinsicSize.Max)
-//                                .align(Alignment.Center)
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-
-                            Text(
-                                text = "Chờ mã xác minh",
-                                modifier = Modifier
-                                    .padding(top = 10.dp)
-                                    .align(Alignment.CenterHorizontally)
-                            )
                         }
+                        .padding(10.dp)
+                        .padding(top = 8.dp, bottom = 8.dp),
+                    elevation = 2.dp,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Column(
+                        Modifier
+                            .padding(10.dp)
+                            .width(IntrinsicSize.Max)
+//                                .align(Alignment.Center)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+
+                        Text(
+                            text = stringResource(id = R.string.waiting_for_verification_code),
+                            modifier = Modifier
+                                .padding(top = 10.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
                     }
                 }
             }
@@ -603,7 +574,7 @@ fun VerifyCodeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Mã xác thực 6 số đã được gửi qua SMS.",
+                stringResource(id = R.string.verification_code_sent),
                 modifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
             )
 
@@ -616,7 +587,7 @@ fun VerifyCodeScreen(
                 ),
                 label = {
                     Text(
-                        text = "Nhập mã xác thực",
+                        text = stringResource(id = R.string.enter_verification_code),
 //                    style = TextStyle(textAlign = TextAlign.Center)
                     )
                 })
@@ -672,7 +643,7 @@ fun VerifyCodeScreen(
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
 //                    Divider(Modifier.height(3.dp))
                         Text(
-                            text = "Đang xác thực",
+                            text = stringResource(id = R.string.verifying),
                             modifier = Modifier
                                 .padding(top = 10.dp)
                                 .align(Alignment.CenterHorizontally)
@@ -718,11 +689,11 @@ fun VerifyCodeScreenPreview() {
 fun ExceptionShowBox(exceptionMessage: String) {
     Surface(
         modifier = Modifier
-            .padding(10.dp)
+            .padding(18.dp)
             .wrapContentSize(),
         color = MaterialTheme.colors.surface,
         contentColor = MaterialTheme.colors.error,
-        elevation = 2.dp
+        elevation = 2.0.dp
     ) {
         Text(
             text = exceptionMessage,
